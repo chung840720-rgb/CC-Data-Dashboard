@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>淨淨 直營線上平台儀表板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; }
+
+  .header {
+    background: #fff;
+    padding: 20px 40px;
+    border-bottom: 1px solid #e8e8e4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-logo {
+    width: 36px; height: 36px;
+    background: #1a1a1a;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 16px;
+  }
+  .header h1 { font-size: 18px; font-weight: 700; }
+  .header-meta { font-size: 12px; color: #999; }
+  .last-updated { font-size: 12px; color: #aaa; background: #f5f5f0; padding: 6px 12px; border-radius: 20px; }
+
+  /* Month Tabs */
+  .month-tabs {
+    background: #fff;
+    border-bottom: 1px solid #e8e8e4;
+    padding: 0 40px;
+    display: flex;
+    gap: 0;
+  }
+  .tab-btn {
+    padding: 14px 28px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: #999;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { color: #1a1a1a; }
+  .tab-btn.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+  .tab-ga4 { margin-left: auto; color: #2563eb !important; }
+  .tab-ga4.active { border-bottom-color: #2563eb !important; color: #2563eb !important; }
+
+  /* GA4 Section */
+  .ga4-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .ga4-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .ga4-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .ga4-full { margin-bottom: 18px; }
+  .funnel-bars { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+  .funnel-row { display: flex; align-items: center; gap: 12px; }
+  .funnel-label { font-size: 12px; color: #999; width: 70px; text-align: right; flex-shrink: 0; }
+  .funnel-track { flex: 1; background: #f0f0ec; border-radius: 4px; height: 28px; position: relative; }
+  .funnel-fill  { height: 28px; border-radius: 4px; display: flex; align-items: center; padding-left: 10px; font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; transition: width 0.6s ease; }
+  .funnel-pct  { font-size: 11px; color: #aaa; width: 48px; text-align: right; flex-shrink: 0; }
+  .region-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .region-name  { font-size: 12px; color: #666; width: 80px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .region-track { flex: 1; background: #f0f0ec; border-radius: 3px; height: 20px; }
+  .region-fill  { height: 20px; border-radius: 3px; background: #3b82f6; }
+  .region-val   { font-size: 11px; color: #888; width: 60px; text-align: right; flex-shrink: 0; }
+  @media (max-width: 768px) {
+    .ga4-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .ga4-2col, .ga4-3col { grid-template-columns: 1fr; }
+  }
+
+  .container { max-width: 1300px; margin: 0 auto; padding: 28px 40px; }
+
+  /* Loading / Error */
+  .loading { text-align: center; padding: 80px; color: #aaa; font-size: 16px; }
+  .error { text-align: center; padding: 40px; color: #dc2626; font-size: 14px; background: #fee2e2; border-radius: 12px; }
+
+  /* KPI Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e8e8e4;
+  }
+  .kpi-label { font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 24px; font-weight: 700; color: #1a1a1a; line-height: 1; margin-bottom: 8px; }
+  .kpi-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-red { background: #dcfce7; color: #16a34a; }   /* 負值/跌=綠 */
+  .badge-green { background: #fee2e2; color: #dc2626; } /* 正值/漲=紅 */
+  .badge-yellow { background: #fef9c3; color: #ca8a04; }
+  .badge-gray { background: #f5f5f0; color: #666; }
+  .kpi-sub { font-size: 11px; color: #aaa; margin-top: 6px; }
+
+  /* Charts Grid */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  .chart-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px;
+    border: 1px solid #e8e8e4;
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
+  .chart-sub { font-size: 11px; color: #bbb; margin-bottom: 18px; }
+
+  /* Table */
+  .table-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px;
+    border: 1px solid #e8e8e4;
+    margin-bottom: 18px;
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  thead th {
+    text-align: left;
+    font-size: 11px; font-weight: 600; color: #999;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 0 12px 10px;
+    border-bottom: 1px solid #f0f0ec;
+  }
+  tbody tr { border-bottom: 1px solid #f5f5f0; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 12px; font-size: 13px; }
+  .platform-tag {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  }
+  .tag-momo { background: #fee2e2; color: #dc2626; }
+  .tag-shopee { background: #fff7ed; color: #ea580c; }
+  .tag-web { background: #eff6ff; color: #2563eb; }
+  .tag-direct { background: #fefce8; color: #ca8a04; }
+  .tag-total { background: #f5f5f0; color: #1a1a1a; font-weight: 700; }
+  .progress-wrap { display: flex; align-items: center; gap: 8px; }
+  .progress-bg { flex: 1; height: 5px; background: #f0f0ec; border-radius: 3px; min-width: 60px; }
+  .progress-bar { height: 5px; border-radius: 3px; }
+
+  footer { text-align: center; padding: 20px; font-size: 11px; color: #ccc; }
+
+  /* Yearly Section */
+  .yearly-section {
+    background: #1a1a1a;
+    padding: 40px 0 32px;
+    margin-top: 8px;
+  }
+  .yearly-section .container { padding-bottom: 0; }
+  .yearly-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .yearly-title { font-size: 18px; font-weight: 700; color: #fff; }
+  .yearly-sub   { font-size: 12px; color: #666; margin-top: 3px; }
+  .yearly-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .yearly-kpi-card {
+    background: #252525;
+    border-radius: 10px;
+    padding: 16px 18px;
+    border: 1px solid #333;
+  }
+  .yearly-kpi-label { font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .yearly-kpi-value { font-size: 22px; font-weight: 700; color: #fff; line-height: 1; margin-bottom: 4px; }
+  .yearly-kpi-sub   { font-size: 11px; color: #555; }
+  .yearly-charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .yearly-chart-card {
+    background: #252525;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #333;
+  }
+  .yearly-chart-title { font-size: 13px; font-weight: 600; color: #ddd; margin-bottom: 3px; }
+  .yearly-chart-sub   { font-size: 11px; color: #555; margin-bottom: 14px; }
+  .yearly-table-card {
+    background: #252525;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #333;
+    overflow-x: auto;
+    margin-bottom: 0;
+  }
+  .yearly-table-card table { min-width: 600px; }
+  .yearly-table-card thead th {
+    text-align: left; font-size: 10px; font-weight: 600; color: #555;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 0 10px 8px; border-bottom: 1px solid #333;
+  }
+  .yearly-table-card tbody tr { border-bottom: 1px solid #2a2a2a; }
+  .yearly-table-card tbody tr:last-child { border-bottom: none; }
+  .yearly-table-card tbody td { padding: 10px; font-size: 13px; color: #ccc; }
+  .yearly-table-card tbody tr:last-child td { color: #fff; font-weight: 700; }
+  .month-tag {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;
+    background: #333; color: #ddd;
+  }
+  .ach-bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .ach-bar-bg   { flex: 1; height: 4px; background: #333; border-radius: 3px; min-width: 50px; }
+  .ach-bar      { height: 4px; border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .container { padding: 16px 20px; }
+    .month-tabs { padding: 0 20px; }
+    .header { padding: 16px 20px; }
+    .tab-btn { padding: 12px 16px; font-size: 13px; }
+    .yearly-kpi-grid    { grid-template-columns: repeat(2, 1fr); }
+    .yearly-charts-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Home View ─────────────────────────────────── */
+  .home-analysis-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .home-section-title { font-size: 20px; font-weight: 700; color: #1a1a1a; }
+  .home-section-sub { font-size: 13px; color: #999; margin-top: 4px; }
+  .home-period-toggle { display: flex; gap: 6px; }
+  .period-btn {
+    padding: 6px 16px; border-radius: 20px; border: 1.5px solid #e8e8e4;
+    background: #fff; font-size: 12px; font-weight: 600; color: #888; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .period-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .platform-analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .platform-analysis-card {
+    background: #fff; border-radius: 14px; border: 1px solid #e8e8e4; padding: 20px;
+  }
+  .platform-analysis-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding-bottom: 12px; border-bottom: 1px solid #f0f0ec;
+  }
+  .platform-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; color: #fff;
+  }
+  .platform-analysis-name { font-size: 15px; font-weight: 700; }
+  .platform-analysis-sub { font-size: 11px; color: #aaa; }
+  .platform-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .platform-metric-item { padding: 10px 12px; background: #fafaf8; border-radius: 8px; }
+  .platform-metric-label { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+  .platform-metric-value { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+  .platform-metric-badge {
+    display: inline-block; margin-top: 4px;
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+  }
+  .badge-metric-good { background: #dcfce7; color: #16a34a; }
+  .badge-metric-ok   { background: #fef9c3; color: #a16207; }
+  .badge-metric-bad  { background: #fee2e2; color: #dc2626; }
+
+  .insights-panel {
+    background: #fff; border-radius: 14px; border: 1px solid #e8e8e4;
+    padding: 22px 26px; margin-bottom: 32px;
+  }
+  .insights-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: #1a1a1a; }
+  .insights-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .insights-col-title { font-size: 12px; font-weight: 700; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .insights-item { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0; border-bottom: 1px solid #f5f5f0; }
+  .insights-item:last-child { border-bottom: none; }
+
+  /* 6-card nav grid */
+  .home-nav-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #1a1a1a; }
+  .home-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .home-nav-card {
+    background: #fff; border-radius: 16px; border: 1.5px solid #e8e8e4;
+    padding: 24px 22px; cursor: pointer; transition: all 0.2s;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .home-nav-card:hover { border-color: #1a1a1a; box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
+  .home-nav-card.disabled { opacity: 0.45; cursor: default; pointer-events: none; }
+  .home-nav-card.disabled:hover { transform: none; box-shadow: none; }
+  .nav-card-icon { font-size: 28px; }
+  .nav-card-title { font-size: 17px; font-weight: 700; color: #1a1a1a; }
+  .nav-card-sub { font-size: 12px; color: #aaa; }
+  .nav-card-badge {
+    display: inline-block; margin-top: 4px;
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 10px;
+  }
+  .nav-badge-active { background: #dcfce7; color: #16a34a; }
+  .nav-badge-soon   { background: #f3f4f6; color: #6b7280; }
+
+  /* Home btn in tabs */
+  .tab-home { font-size: 14px; }
+  .tab-home.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+
+  /* Back to home button */
+  .btn-home-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 16px; border-radius: 20px;
+    border: 1.5px solid #e8e8e4; background: #fff;
+    font-size: 13px; font-weight: 600; color: #666; cursor: pointer;
+    transition: all 0.2s; margin-bottom: 20px;
+  }
+  .btn-home-back:hover { border-color: #1a1a1a; color: #1a1a1a; }
+
+  @media (max-width: 900px) {
+    .platform-analysis-grid { grid-template-columns: 1fr; }
+    .insights-row { grid-template-columns: 1fr; }
+    .home-nav-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">淨</div>
+    <div>
+      <h1>淨淨 直營線上平台儀表板</h1>
+      <div class="header-meta" id="headerMeta">資料來源：Google Sheets（Apps Script）</div>
+    </div>
+  </div>
+  <div class="last-updated" id="lastUpdated">🕐 更新：2026-04-10 15:54</div>
+</div>
+
+<div class="month-tabs">
+  <button class="tab-btn tab-home active" data-view="home">🏠 首頁</button>
+  <button class="tab-btn" data-month="1月業績">1月</button>
+  <button class="tab-btn" data-month="2月業績">2月</button>
+  <button class="tab-btn" data-month="3月業績">3月</button>
+  <button class="tab-btn" data-month="4月業績">4月</button>
+  <button class="tab-btn tab-ga4" data-view="ga4">📊 流量分析</button>
+</div>
+
+<!-- ══════════════════ 首頁 ══════════════════ -->
+<div id="homeView">
+  <div class="container">
+    <div id="homeContent"><div class="loading">⏳ 資料載入中，分析準備中...</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ 月份詳情 ══════════════════ -->
+<div id="monthView" style="display:none">
+  <div class="container">
+    <button class="btn-home-back" onclick="showView('home')">← 返回首頁</button>
+    <div id="dashboard"></div>
+  </div>
+
+  <!-- ══════════════════════════════ 年度總覽（固定底部）══════════════════════════════ -->
+  <div class="yearly-section">
+    <div class="container">
+      <div class="yearly-header">
+        <div>
+          <div class="yearly-title">📊 2026 年度總覽</div>
+          <div class="yearly-sub" id="yearlySubTitle">載入各月資料中...</div>
+        </div>
+      </div>
+      <div class="yearly-kpi-grid" id="yearlyKPIs">
+        <div class="yearly-kpi-card"><div class="yearly-kpi-label">YTD 累計業績</div><div class="yearly-kpi-value">—</div></div>
+        <div class="yearly-kpi-card"><div class="yearly-kpi-label">YTD 廣告花費</div><div class="yearly-kpi-value">—</div></div>
+        <div class="yearly-kpi-card"><div class="yearly-kpi-label">整體 ROAS</div><div class="yearly-kpi-value">—</div></div>
+        <div class="yearly-kpi-card"><div class="yearly-kpi-label">YTD 流量</div><div class="yearly-kpi-value">—</div></div>
+      </div>
+      <div class="yearly-charts-grid">
+        <div class="yearly-chart-card">
+          <div class="yearly-chart-title">📈 各月業績趨勢</div>
+          <div class="yearly-chart-sub">每月累計業績與目標</div>
+          <div style="height:240px"><canvas id="yearlyRevenueChart"></canvas></div>
+        </div>
+        <div class="yearly-chart-card">
+          <div class="yearly-chart-title">🎯 各月達成率</div>
+          <div class="yearly-chart-sub">目標達成百分比</div>
+          <div style="height:240px"><canvas id="yearlyAchChart"></canvas></div>
+        </div>
+      </div>
+      <div class="yearly-table-card">
+        <div class="yearly-chart-title" style="margin-bottom:14px">📋 逐月彙整明細</div>
+        <table id="yearlyTable">
+          <thead>
+            <tr>
+              <th>月份</th><th>累計業績</th><th>月份目標</th><th>達成率</th>
+              <th>廣告花費</th><th>ROAS</th><th>流量</th><th>客單價</th>
+            </tr>
+          </thead>
+          <tbody id="yearlyTableBody">
+            <tr><td colspan="8" style="color:#444;text-align:center;padding:20px">載入中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ GA4 流量分析 ══════════════════ -->
+<div id="ga4Section" style="display:none">
+  <div class="container">
+    <button class="btn-home-back" onclick="showView('home')">← 返回首頁</button>
+    <div id="ga4Dashboard"><div class="loading">⏳ 載入 GA4 資料中...</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ Meta 廣告 ══════════════════ -->
+<div id="metaSection" style="display:none">
+  <div class="container">
+    <button class="btn-home-back" onclick="showView('home')">← 返回首頁</button>
+    <div style="text-align:center;padding:80px 0">
+      <div style="font-size:48px;margin-bottom:16px">📱</div>
+      <div style="font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:8px">Meta 廣告分析</div>
+      <div style="font-size:14px;color:#aaa">尚未串接，即將推出</div>
+    </div>
+  </div>
+</div>
+
+<footer id="footerText">淨淨 Cowork 自動同步｜資料來源：Google Sheets（Apps Script）｜2026-04-10 15:54 更新</footer>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxQhzJMRvp-1nRDcdon2VHVHkBHf7BTO2SVLtFAYV6OcQnkQ65ay-rIOcMk3UD1Rjfu_Q/exec';
+const MONTH_KEYS = ['1月業績','2月業績','3月業績','4月業績'];
+const MONTH_LABELS = { '1月業績':'1月', '2月業績':'2月', '3月業績':'3月', '4月業績':'4月' };
+
+const C = { momo:'#ef4444', shopee:'#f97316', web:'#3b82f6', direct:'#eab308' };
+
+let allData = {};
+let activeMonth = '4月業績';
+let chartInstances = {};
+let currentView = 'home';
+let ga4Loaded = false;
+
+function showView(view) {
+  currentView = view;
+  document.getElementById('homeView').style.display    = view === 'home'  ? 'block' : 'none';
+  document.getElementById('monthView').style.display   = view === 'month' ? 'block' : 'none';
+  document.getElementById('ga4Section').style.display  = view === 'ga4'   ? 'block' : 'none';
+  document.getElementById('metaSection').style.display = view === 'meta'  ? 'block' : 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (view === 'home') {
+    document.querySelector('[data-view="home"]')?.classList.add('active');
+  } else if (view === 'ga4') {
+    document.querySelector('[data-view="ga4"]')?.classList.add('active');
+  } else if (view === 'month') {
+    document.querySelector(`[data-month="${activeMonth}"]`)?.classList.add('active');
+  }
+}
+
+// ── 計算近7天 vs 前7天 資料（跨月支援）─────────────────────────────────────
+function getWeeklyData(latestData, prevData) {
+  const d = latestData.daily;
+  const n = d.dates.length;
+
+  function sumArr(arr, s, e) {
+    if (!arr || arr.length === 0) return 0;
+    return arr.slice(s, e).reduce((a, b) => a + (b || 0), 0);
+  }
+
+  // 轉換率平均：7天加總後除以 7（依使用者指定的計算方式）
+  function avgCR(arr, s, e) {
+    if (!arr || arr.length === 0) return 0;
+    const slice = arr.slice(s, e);
+    if (slice.length === 0) return 0;
+    const total = slice.reduce((a, b) => a + (b || 0), 0);
+    return total / slice.length;   // 以實際天數為分母（通常為 7）
+  }
+
+  // ── 找最後一筆有實際數據的列（跳過試算表預建的空白未來列）────────────────
+  let lastDataIdx = n - 1;
+  while (lastDataIdx >= 0 &&
+    (d.momo[lastDataIdx]   || 0) +
+    (d.shopee[lastDataIdx] || 0) +
+    (d.web[lastDataIdx]    || 0) === 0) {
+    lastDataIdx--;
+  }
+  // 近7天：以最後有資料的日期為終點，往前推7天
+  const nearEnd   = lastDataIdx + 1;     // exclusive
+  const nearStart = Math.max(0, nearEnd - 7);
+
+  // 前7天：緊接在近7天之前，以 nearStart 為終點往前推7筆，可能跨月
+  const prevEnd   = nearStart;
+  const availFromCurrent = prevEnd;                           // 當月在近7天前可用筆數
+  const needFromPrev     = Math.max(0, 7 - availFromCurrent); // 不足的從上月補
+
+  const prevCurrentStart = Math.max(0, prevEnd - (7 - needFromPrev));
+
+  let prevMonthSliceStart = null, prevMonthSliceEnd = null;
+  if (needFromPrev > 0 && prevData) {
+    const pm = prevData.daily;
+    prevMonthSliceStart = Math.max(0, pm.dates.length - needFromPrev);
+    prevMonthSliceEnd   = pm.dates.length;
+  }
+
+  // ── 組合日期標籤（升冪：較早的日期在前）──────────────────────────────────
+  const nearDates = d.dates.slice(nearStart, nearEnd);
+  let prevDates = [];
+  if (prevMonthSliceStart !== null) {
+    prevDates = prevData.daily.dates.slice(prevMonthSliceStart, prevMonthSliceEnd);
+  }
+  prevDates = prevDates.concat(d.dates.slice(prevCurrentStart, prevEnd));
+
+  // 格式：4/7–4/13（小日期在前，大日期在後）
+  const nearLabel = nearDates.length > 0
+    ? `${nearDates[0]}–${nearDates[nearDates.length - 1]}`
+    : '近7天';
+  const prevLabel = prevDates.length > 0
+    ? `${prevDates[0]}–${prevDates[prevDates.length - 1]}`
+    : '前7天';
+
+  // ── 計算各平台數據 ─────────────────────────────────────────────────────────
+  function buildMetrics(wk) {
+    const revKey = wk;
+    const trfKey = wk + 'Traffic';
+    const ordKey = wk + 'Orders';
+    const adsKey = wk + 'AdSpend';
+    const crKey  = wk + 'CR';   // 轉換率欄位（直接從表格讀取）
+
+    const nearRev = sumArr(d[revKey], nearStart, nearEnd);
+    const nearTrf = sumArr(d[trfKey], nearStart, nearEnd);
+    const nearOrd = sumArr(d[ordKey], nearStart, nearEnd);
+    const nearAds = sumArr(d[adsKey], nearStart, nearEnd);
+
+    let prevRev = 0, prevTrf = 0, prevOrd = 0, prevAds = 0;
+    if (prevMonthSliceStart !== null) {
+      const pm = prevData.daily;
+      prevRev += sumArr(pm[revKey], prevMonthSliceStart, prevMonthSliceEnd);
+      prevTrf += sumArr(pm[trfKey], prevMonthSliceStart, prevMonthSliceEnd);
+      prevOrd += sumArr(pm[ordKey], prevMonthSliceStart, prevMonthSliceEnd);
+      prevAds += sumArr(pm[adsKey], prevMonthSliceStart, prevMonthSliceEnd);
+    }
+    prevRev += sumArr(d[revKey], prevCurrentStart, prevEnd);
+    prevTrf += sumArr(d[trfKey], prevCurrentStart, prevEnd);
+    prevOrd += sumArr(d[ordKey], prevCurrentStart, prevEnd);
+    prevAds += sumArr(d[adsKey], prevCurrentStart, prevEnd);
+
+    // 轉換率：直接讀表格中的數字，取近7天平均（過濾空白日）
+    const nearCR = avgCR(d[crKey], nearStart, nearEnd);
+
+    // 前7天轉換率：跨月合併後取平均
+    let prevCRVals = [];
+    if (prevMonthSliceStart !== null) {
+      const pm = prevData.daily;
+      prevCRVals = prevCRVals.concat(
+        (pm[crKey] || []).slice(prevMonthSliceStart, prevMonthSliceEnd).filter(v => v > 0)
+      );
+    }
+    prevCRVals = prevCRVals.concat(
+      (d[crKey] || []).slice(prevCurrentStart, prevEnd).filter(v => v > 0)
+    );
+    const prevCR = prevCRVals.length > 0
+      ? prevCRVals.reduce((a, b) => a + b, 0) / prevCRVals.length
+      : 0;
+
+    // 客單價 = 業績合計 ÷ 訂單數合計；ROAS = 業績合計 ÷ 廣告費合計
+    const nearAOV  = nearOrd > 0 ? nearRev / nearOrd : 0;
+    const prevAOV  = prevOrd > 0 ? prevRev / prevOrd : 0;
+    const nearROAS = nearAds > 0 ? nearRev / nearAds : 0;
+    const prevROAS = prevAds > 0 ? prevRev / prevAds : 0;
+
+    return { nearRev, prevRev, nearTrf, prevTrf, nearOrd, prevOrd,
+             nearCR, prevCR, nearAOV, prevAOV, nearROAS, prevROAS,
+             nearAds, prevAds };
+  }
+
+  return {
+    nearLabel,
+    prevLabel,
+    nearDays: nearDates.length,
+    momo:   buildMetrics('momo'),
+    shopee: buildMetrics('shopee'),
+    web:    buildMetrics('web'),
+    hasDailyTraffic: (d.momoTraffic || []).some(v => v > 0) ||
+                     (d.shopeeTraffic || []).some(v => v > 0) ||
+                     (d.webTraffic || []).some(v => v > 0),
+  };
+}
+
+function renderHomepage() {
+  const latestKey  = [...MONTH_KEYS].reverse().find(k => allData[k]);
+  const prevKey    = latestKey ? MONTH_KEYS[MONTH_KEYS.indexOf(latestKey) - 1] : null;
+  const latestData = latestKey ? allData[latestKey] : null;
+  const prevData   = prevKey   ? allData[prevKey]   : null;
+
+  if (!latestData) {
+    document.getElementById('homeContent').innerHTML = '<div class="error">⚠️ 無法載入資料，請確認 Apps Script 部署正確。</div>';
+    return;
+  }
+
+  const { summary, daily, monthName } = latestData;
+
+  // ── 更新右上角時間（首頁載入時同步更新）─────────────────────────────────
+  const now = new Date();
+  const ts  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('lastUpdated').textContent = `🕐 更新：${ts}`;
+  document.getElementById('headerMeta').textContent  = `首頁 | 資料來源：Google Sheets（Apps Script）`;
+  document.getElementById('footerText').textContent  = `淨淨 Cowork 自動同步｜資料來源：Google Sheets（Apps Script）｜${ts} 更新`;
+
+  // ── 取得週期資料 ───────────────────────────────────────────────────────────
+  const wk = getWeeklyData(latestData, prevData);
+  const { nearLabel, prevLabel } = wk;
+
+  // ── 輔助函數 ──────────────────────────────────────────────────────────────
+  function chgPct(curr, prev) {
+    if (!prev || prev === 0) return null;
+    return (curr - prev) / prev * 100;
+  }
+
+  // 週環比顏色徽章（正=綠, 負=紅, null=灰）
+  function wkChip(curr, prev, unit = '') {
+    const p = chgPct(curr, prev);
+    if (p === null) return `<span style="color:#bbb;font-size:12px">—</span>`;
+    const color = p > 0 ? '#dc2626' : '#16a34a';   // 正值=紅（漲）, 負值=綠（跌）
+    const arrow = p > 0 ? '▲' : '▼';
+    return `<span style="color:${color};font-weight:700;font-size:12px">${arrow}${Math.abs(p).toFixed(1)}%</span>`;
+  }
+
+  // 數值色彩（週環比為正=紅, 負=綠）
+  function valColor(curr, prev) {
+    const p = chgPct(curr, prev);
+    if (p === null) return '#1a1a1a';
+    return p >= 0 ? '#dc2626' : '#16a34a';
+  }
+
+  // 月累計指標顏色標籤
+  function metricChip(val, good, ok) {
+    const c = val >= good ? '#dc2626' : val >= ok ? '#d97706' : '#16a34a';
+    const t = val >= good ? '良好' : val >= ok ? '普通' : '待加強';
+    return `<span style="display:inline-block;background:${c}18;color:${c};font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;margin-top:3px">${t}</span>`;
+  }
+
+  // 週環比洞察（聚焦流量、轉換、客單、ROAS）
+  function platformInsight(label, d, wkM) {
+    const parts = [];
+    const trfPct  = wkM.nearTrf > 0 && wkM.prevTrf > 0 ? chgPct(wkM.nearTrf, wkM.prevTrf) : null;
+    const crDelta = wkM.nearCR - wkM.prevCR;
+    const aovPct  = wkM.nearAOV > 0 && wkM.prevAOV > 0 ? chgPct(wkM.nearAOV, wkM.prevAOV) : null;
+    const roasPct = wkM.nearROAS > 0 && wkM.prevROAS > 0 ? chgPct(wkM.nearROAS, wkM.prevROAS) : null;
+
+    // 流量分析
+    if (trfPct !== null) {
+      if (trfPct < -15)      parts.push(`流量週環比 ${trfPct.toFixed(1)}%，引流效率明顯下降，建議補充投放或活動刺激`);
+      else if (trfPct < -5)  parts.push(`流量週環比 ${trfPct.toFixed(1)}%，小幅下滑，留意引流成效`);
+      else if (trfPct > 15)  parts.push(`流量週環比 +${trfPct.toFixed(1)}%，引流效果良好`);
+      else if (trfPct > 3)   parts.push(`流量週環比 +${trfPct.toFixed(1)}%，流量穩健成長`);
+      else                   parts.push(`流量週環比 ${trfPct >= 0 ? '+' : ''}${trfPct.toFixed(1)}%，流量平穩`);
+    }
+
+    // 轉換率分析（排除前期資料不足導致 prevCR 異常低的情況：prevCR < nearCR * 0.3）
+    const crReliable = wkM.prevCR > 0 && wkM.nearCR > 0 && (wkM.prevCR / wkM.nearCR >= 0.3);
+    if (crReliable && Math.abs(crDelta) > 0.1) {
+      if (crDelta < -0.5)    parts.push(`轉換率由 ${wkM.prevCR.toFixed(2)}% 降至 ${wkM.nearCR.toFixed(2)}%，建議檢視商品頁與結帳流程`);
+      else if (crDelta < 0)  parts.push(`轉換率由 ${wkM.prevCR.toFixed(2)}% 微降至 ${wkM.nearCR.toFixed(2)}%，持續觀察`);
+      else if (crDelta > 0.5) parts.push(`轉換率由 ${wkM.prevCR.toFixed(2)}% 提升至 ${wkM.nearCR.toFixed(2)}%，轉換表現明顯改善`);
+      else                   parts.push(`轉換率由 ${wkM.prevCR.toFixed(2)}% 小升至 ${wkM.nearCR.toFixed(2)}%`);
+    } else if (wkM.nearCR > 0) {
+      parts.push(`轉換率 ${wkM.nearCR.toFixed(2)}%，前期資料不足，暫無週環比`);
+    }
+
+    // 客單價分析
+    if (aovPct !== null && Math.abs(aovPct) > 3) {
+      if (aovPct < -8)       parts.push(`客單價週環比 ${aovPct.toFixed(1)}%，消費力下滑，建議加強搭售或升級推薦`);
+      else if (aovPct < 0)   parts.push(`客單價週環比 ${aovPct.toFixed(1)}%，小幅下降，可考慮滿額優惠策略`);
+      else if (aovPct > 8)   parts.push(`客單價週環比 +${aovPct.toFixed(1)}%，消費力提升，可強化高單價品組合`);
+      else                   parts.push(`客單價週環比 +${aovPct.toFixed(1)}%，消費力穩定成長`);
+    }
+
+    // ROAS 分析
+    if (roasPct !== null && Math.abs(roasPct) > 5) {
+      if (roasPct < -15)     parts.push(`ROAS 週環比 ${roasPct.toFixed(1)}%，廣告效率明顯下滑，建議立即檢視素材與受眾設定`);
+      else if (roasPct < 0)  parts.push(`ROAS 週環比 ${roasPct.toFixed(1)}%，廣告效益下滑，留意素材疲勞`);
+      else if (roasPct > 15) parts.push(`ROAS 週環比 +${roasPct.toFixed(1)}%，廣告效益顯著提升`);
+      else                   parts.push(`ROAS 週環比 +${roasPct.toFixed(1)}%，廣告效益穩定`);
+    }
+
+    if (parts.length === 0) parts.push(`各指標週環比穩定，持續監控流量與轉換效率`);
+
+    return parts.slice(0, 2).join('；');
+  }
+
+  // ── 平台定義 ──────────────────────────────────────────────────────────────
+  const platforms = [
+    { key: 'MOMO',   label: 'MOMO', color: '#ef4444', emoji: '🛍️', wkKey: 'momo',   data: summary['MOMO']   || {} },
+    { key: 'shopee', label: '蝦皮',  color: '#f97316', emoji: '🦐', wkKey: 'shopee', data: summary['蝦皮']   || {} },
+    { key: 'web',    label: '官網',  color: '#3b82f6', emoji: '🌐', wkKey: 'web',    data: summary['官網']   || {} },
+  ];
+
+  const platformCards = platforms.map(p => {
+    const d   = p.data;
+    const wkM = wk[p.wkKey];
+    const cr  = d.traffic > 0 ? (d.orders / d.traffic * 100) : 0;
+
+    // 週環比：近7天 CR 和 前7天 CR
+    const nearCR = wkM.nearCR;
+    const prevCR = wkM.prevCR;
+    const hasTrf = wkM.nearTrf > 0 || wkM.prevTrf > 0;
+
+    return `
+    <div class="platform-analysis-card">
+      <div class="platform-analysis-header">
+        <div class="platform-icon" style="background:${p.color}">${p.emoji}</div>
+        <div style="flex:1">
+          <div class="platform-analysis-name">${p.label}</div>
+          <div class="platform-analysis-sub">${monthName} 累計</div>
+        </div>
+      </div>
+
+      <!-- 近7天 指標標題 -->
+      <div style="font-size:10px;color:#bbb;font-weight:600;letter-spacing:0.04em;margin:10px 0 6px">
+        ${nearLabel} 近7天指標
+      </div>
+
+      <!-- 業績 2x1 全寬 -->
+      <div style="background:#fafaf8;border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:3px">💰 業績</div>
+          <div style="font-size:22px;font-weight:800;color:${valColor(wkM.nearRev,wkM.prevRev)}">$${Math.round(wkM.nearRev).toLocaleString()}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#bbb;margin-bottom:4px">vs $${Math.round(wkM.prevRev).toLocaleString()}</div>
+          ${wkChip(wkM.nearRev, wkM.prevRev)}
+        </div>
+      </div>
+
+      <!-- 2x2 指標格 -->
+      <div class="platform-metric-grid">
+        <div class="platform-metric-item">
+          <div class="platform-metric-label">👥 流量</div>
+          ${wkM.nearTrf > 0
+            ? `<div class="platform-metric-value" style="color:${valColor(wkM.nearTrf,wkM.prevTrf)}">${wkM.nearTrf.toLocaleString()}</div>
+               ${wkChip(wkM.nearTrf, wkM.prevTrf)}`
+            : `<div class="platform-metric-value" style="color:#bbb">—</div>`}
+        </div>
+        <div class="platform-metric-item">
+          <div class="platform-metric-label">🔄 轉換率</div>
+          ${wkM.nearCR > 0
+            ? `<div class="platform-metric-value" style="color:${wkM.nearCR >= wkM.prevCR || wkM.prevCR===0 ? '#dc2626':'#16a34a'}">${wkM.nearCR.toFixed(2)}%</div>
+               <span style="font-size:11px;color:${wkM.nearCR >= wkM.prevCR || wkM.prevCR===0 ? '#dc2626':'#16a34a'}">
+                 ${wkM.prevCR > 0 ? ((wkM.nearCR >= wkM.prevCR ? '▲' : '▼') + Math.abs(wkM.nearCR - wkM.prevCR).toFixed(2) + 'pp') : '—'}</span>`
+            : `<div class="platform-metric-value" style="color:#bbb">—</div>`}
+        </div>
+        <div class="platform-metric-item">
+          <div class="platform-metric-label">🛒 客單價</div>
+          ${wkM.nearAOV > 0
+            ? `<div class="platform-metric-value" style="color:${valColor(wkM.nearAOV,wkM.prevAOV)}">$${Math.round(wkM.nearAOV).toLocaleString()}</div>
+               ${wkChip(wkM.nearAOV, wkM.prevAOV)}`
+            : `<div class="platform-metric-value" style="color:#bbb">—</div>`}
+        </div>
+        <div class="platform-metric-item">
+          <div class="platform-metric-label">📈 ROAS</div>
+          ${wkM.nearROAS > 0
+            ? `<div class="platform-metric-value" style="color:${valColor(wkM.nearROAS,wkM.prevROAS)}">${wkM.nearROAS.toFixed(1)}x</div>
+               ${wkChip(wkM.nearROAS, wkM.prevROAS)}`
+            : `<div class="platform-metric-value" style="color:#bbb">—</div>`}
+        </div>
+      </div>
+
+      <!-- 平台洞察 -->
+      <div style="margin-top:12px;padding:10px 12px;background:#f8f9ff;border-left:3px solid ${p.color};border-radius:0 8px 8px 0;font-size:12px;color:#444;line-height:1.6">
+        💡 ${platformInsight(p.label, d, { ...wkM, hasDailyTraffic: hasTrf })}
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── 當月各平台業績彙整表 ─────────────────────────────────────────────────
+  const total  = summary['總']       || {};
+  const momo   = summary['MOMO']    || {};
+  const shopee = summary['蝦皮']    || {};
+  const web    = summary['官網']    || {};
+  const direct = summary['蝦皮直營'] || null;
+
+  function tableRow(tag, tagCls, d, barColor) {
+    const ach = (d.achievement || 0) * 100;
+    return `<tr>
+      <td style="padding:8px 10px"><span class="platform-tag ${tagCls}">${tag}</span></td>
+      <td style="text-align:right;padding:8px 10px">${fmtFull(d.revenue||0)}</td>
+      <td style="padding:8px 10px">
+        <div class="progress-wrap">
+          <div class="progress-bg"><div class="progress-bar" style="width:${Math.min(ach,100)}%;background:${barColor}"></div></div>
+          <span>${pct(d.achievement||0)}</span>
+        </div>
+      </td>
+      <td style="text-align:right;padding:8px 10px">${pct(d.share||0)}</td>
+      <td style="text-align:right;padding:8px 10px">${(d.roas||0).toFixed(1)}x</td>
+      <td style="text-align:right;padding:8px 10px">${fmtFull(d.adSpend||0)}</td>
+      <td style="text-align:right;padding:8px 10px">${fmtFull(d.aov||0)}</td>
+      <td style="text-align:right;padding:8px 10px">$${Math.round(d.cpa||0)}</td>
+    </tr>`;
+  }
+
+  const directRow2 = direct ? `<tr>
+    <td><span class="platform-tag tag-direct">蝦皮直營</span></td>
+    <td>${fmtFull(direct.revenue||0)}</td>
+    <td>—</td><td>${pct(direct.share||0)}</td>
+    <td>—</td><td>—</td><td>—</td><td>—</td>
+  </tr>` : '';
+
+  const monthlyTableHTML = `
+  <div class="insights-panel" style="padding:20px 24px">
+    <div class="insights-title" style="margin-bottom:14px">📋 ${monthName} 各平台業績彙整</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="border-bottom:2px solid #f0f0ec">
+            <th style="text-align:left;padding:8px 10px;color:#999;font-weight:600;font-size:11px">平台</th>
+            <th style="text-align:right;padding:8px 10px;color:#999;font-weight:600;font-size:11px">累計業績</th>
+            <th style="padding:8px 10px;color:#999;font-weight:600;font-size:11px">達成率</th>
+            <th style="text-align:right;padding:8px 10px;color:#999;font-weight:600;font-size:11px">占比</th>
+            <th style="text-align:right;padding:8px 10px;color:#999;font-weight:600;font-size:11px">ROAS</th>
+            <th style="text-align:right;padding:8px 10px;color:#999;font-weight:600;font-size:11px">廣告花費</th>
+            <th style="text-align:right;padding:8px 10px;color:#999;font-weight:600;font-size:11px">客單價</th>
+            <th style="text-align:right;padding:8px 10px;color:#999;font-weight:600;font-size:11px">CPA</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRow('MOMO','tag-momo', momo,'#dc2626')}
+          ${tableRow('蝦皮','tag-shopee', shopee,'#ea580c')}
+          ${tableRow('官網','tag-web', web,'#2563eb')}
+          ${directRow2}
+          <tr style="border-top:2px solid #e8e8e4;background:#fafaf8;font-weight:700">
+            <td style="padding:10px"><span class="platform-tag tag-total">全平台</span></td>
+            <td style="text-align:right;padding:10px">${fmtFull(total.revenue||0)}</td>
+            <td style="padding:10px">
+              <div class="progress-wrap">
+                <div class="progress-bg"><div class="progress-bar" style="width:${Math.min((total.achievement||0)*100,100)}%;background:#1a1a1a"></div></div>
+                <span>${pct(total.achievement||0)}</span>
+              </div>
+            </td>
+            <td style="text-align:right;padding:10px">100%</td>
+            <td style="text-align:right;padding:10px">${(total.roas||0).toFixed(1)}x</td>
+            <td style="text-align:right;padding:10px">${fmtFull(total.adSpend||0)}</td>
+            <td style="text-align:right;padding:10px">${fmtFull(total.aov||0)}</td>
+            <td style="text-align:right;padding:10px">$${Math.round(total.cpa||0)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  // ── Nav cards ──────────────────────────────────────────────────────────────
+  const navCards = [
+    { label: '1月業績', title: '1月報表', icon: '📅', sub: allData['1月業績'] ? `業績 ${fmt(allData['1月業績'].summary['總']?.revenue||0)}` : '資料載入中', active: !!allData['1月業績'] },
+    { label: '2月業績', title: '2月報表', icon: '📅', sub: allData['2月業績'] ? `業績 ${fmt(allData['2月業績'].summary['總']?.revenue||0)}` : '資料載入中', active: !!allData['2月業績'] },
+    { label: '3月業績', title: '3月報表', icon: '📅', sub: allData['3月業績'] ? `業績 ${fmt(allData['3月業績'].summary['總']?.revenue||0)}` : '資料載入中', active: !!allData['3月業績'] },
+    { label: '4月業績', title: '4月報表', icon: '📅', sub: allData['4月業績'] ? `業績 ${fmt(allData['4月業績'].summary['總']?.revenue||0)}` : '資料載入中', active: !!allData['4月業績'] },
+    { label: 'ga4',     title: 'GA4 流量分析', icon: '📊', sub: '網站流量 · 轉換漏斗 · 受眾', active: true, view: true },
+    { label: 'meta',    title: 'Meta 廣告分析', icon: '📱', sub: '尚未串接，即將推出', active: false, disabled: true },
+  ];
+
+  const navHTML = navCards.map(c => `
+    <div class="home-nav-card${c.disabled ? ' disabled' : ''}"
+      onclick="${c.disabled ? '' : c.view ? `navToView('${c.label}')` : `navToMonth('${c.label}')`}">
+      <div class="nav-card-icon">${c.icon}</div>
+      <div class="nav-card-title">${c.title}</div>
+      <div class="nav-card-sub">${c.sub}</div>
+      <span class="nav-card-badge ${c.disabled ? 'nav-badge-soon' : 'nav-badge-active'}">${c.disabled ? '即將推出' : '已連線'}</span>
+    </div>`).join('');
+
+  document.getElementById('homeContent').innerHTML = `
+    <div style="margin-bottom:28px">
+      <div class="home-analysis-header">
+        <div>
+          <div class="home-section-title">📊 智慧數據分析</div>
+          <div class="home-section-sub">近7天 vs 前7天業績週環比</div>
+        </div>
+      </div>
+      <div class="platform-analysis-grid">${platformCards}</div>
+      ${monthlyTableHTML}
+    </div>
+    <div class="home-nav-title">📂 各月報表 & 分析模組</div>
+    <div class="home-nav-grid">${navHTML}</div>
+  `;
+}
+
+function navToMonth(monthKey) {
+  activeMonth = monthKey;
+  showView('month');
+  renderDashboard(activeMonth);
+  renderYearlyOverview();
+}
+
+function navToView(viewKey) {
+  if (viewKey === 'ga4') {
+    showView('ga4');
+    if (!ga4Loaded) {
+      ga4Loaded = true;
+      fetchGA4().then(data => renderGA4(data)).catch(err => {
+        document.getElementById('ga4Dashboard').innerHTML =
+          `<div class="error">⚠️ GA4 資料載入失敗：${err.message}</div>`;
+      });
+    }
+  } else if (viewKey === 'meta') {
+    showView('meta');
+  }
+}
+
+// ── CSV Parser ──────────────────────────────────────────────────────────────
+function parseCSV(csv) {
+  const raw = csv.split('\n').map(l => l.split(','));
+  const monthName = raw[0][0];
+
+  // Summary section: rows 2 onwards until blank
+  const summary = {};
+  let i = 2;
+  while (i < raw.length && raw[i].join('').replace(/,/g,'').trim() !== '') {
+    const row = raw[i];
+    const name = row[0].trim();
+    if (name) {
+      summary[name] = {
+        revenue:     parseFloat(row[1])  || 0,
+        share:       parseFloat(row[2])  || 0,
+        mom:         (row[4] && row[4].trim() !== '-' && row[4].trim() !== '') ? parseFloat(row[4]) : null,
+        target:      parseFloat(row[6])  || 0,
+        achievement: parseFloat(row[7])  || 0,
+        traffic:     parseInt(row[8])    || 0,
+        orders:      parseInt(row[9])    || 0,
+        aov:         parseFloat(row[10]) || 0,
+        adSpend:     parseFloat(row[11]) || 0,
+        roas:        parseFloat(row[12]) || 0,
+        cpa:         parseFloat(row[13]) || 0,
+      };
+    }
+    i++;
+  }
+
+  // Skip blank lines
+  while (i < raw.length && raw[i].join('').replace(/,/g,'').trim() === '') i++;
+
+  // Daily section: [platform header], [col header], [data rows...]
+  i++; // skip platform header row
+  i++; // skip column header row
+
+  const daily = {
+    dates: [], rawDates: [],
+    momo: [], shopee: [], web: [], direct: [],
+    momoTraffic: [], momoOrders: [], momoAdSpend: [], momoCR: [],
+    shopeeTraffic: [], shopeeOrders: [], shopeeAdSpend: [], shopeeCR: [],
+    webTraffic: [], webOrders: [], webAdSpend: [], webCR: [],
+  };
+  while (i < raw.length && raw[i][0] && raw[i][0].trim() !== '') {
+    const row = raw[i];
+    try {
+      const d = new Date(row[0]);
+      if (!isNaN(d.getTime())) {
+        daily.dates.push(`${d.getMonth()+1}/${d.getDate()}`);
+        daily.rawDates.push(d);
+        // MOMO: B=rev, C=traffic, D=轉換率%, E=訂單數, G=廣告費
+        daily.momo.push(         parseFloat(row[1])  || 0);  // B (index 1)
+        daily.momoTraffic.push(  parseInt(row[2])    || 0);  // C (index 2)
+        daily.momoCR.push(       parseFloat(row[3])  || 0);  // D (index 3) 轉換率
+        daily.momoOrders.push(   parseInt(row[4])    || 0);  // E (index 4) 訂單數
+        daily.momoAdSpend.push(  parseFloat(row[6])  || 0);  // G (index 6) 廣告費
+        // 蝦皮: I=rev, J=traffic, K=轉換率%, L=訂單數, P=廣告費
+        daily.shopee.push(        parseFloat(row[8])  || 0);  // I (index 8)
+        daily.shopeeTraffic.push( parseInt(row[9])    || 0);  // J (index 9)
+        daily.shopeeCR.push(      (parseFloat(row[10]) || 0) * 100);  // K (index 10) 小數→×100轉%
+        daily.shopeeOrders.push(  parseInt(row[11])   || 0);          // L (index 11) 訂單數
+        daily.shopeeAdSpend.push( parseFloat(row[15]) || 0);          // P (index 15) 廣告費
+        // 官網: R=rev, S=traffic, T=轉換率%, U=訂單數, Y=廣告費
+        daily.web.push(        parseFloat(row[17]) || 0);    // R (index 17)
+        daily.webTraffic.push( parseInt(row[18])   || 0);    // S (index 18)
+        daily.webCR.push(      (parseFloat(row[19]) || 0) * 100);    // T (index 19) 小數→×100轉%
+        daily.webOrders.push(  parseInt(row[20])   || 0);    // U (index 20) 訂單數
+        daily.webAdSpend.push( parseFloat(row[24]) || 0);    // Y (index 24) 廣告費
+        const dir = parseFloat(row[26]);
+        daily.direct.push(isNaN(dir) ? null : dir);
+      }
+    } catch(e) {}
+    i++;
+  }
+
+  return { monthName, summary, daily };
+}
+
+// ── Formatters ───────────────────────────────────────────────────────────────
+const fmt     = n => n >= 1000000 ? `$${(n/1000000).toFixed(2)}M` : n >= 10000 ? `$${Math.round(n/1000)}K` : `$${Math.round(n).toLocaleString()}`;
+const fmtFull = n => '$' + Math.round(n).toLocaleString();
+const pct     = n => (n * 100).toFixed(1) + '%';
+const sign    = n => (n >= 0 ? '+' : '') + (n * 100).toFixed(1) + '%';
+const achColor = a => a >= 1 ? 'badge-red' : a >= 0.7 ? 'badge-yellow' : 'badge-green';
+
+// ── Render Dashboard ─────────────────────────────────────────────────────────
+function renderDashboard(monthKey) {
+  const data = allData[monthKey];
+  if (!data) return;
+
+  const { monthName, summary, daily } = data;
+  const total  = summary['總']      || {};
+  const momo   = summary['MOMO']   || {};
+  const shopee = summary['蝦皮']   || {};
+  const web    = summary['官網']   || {};
+  const direct = summary['蝦皮直營'] || null;
+
+  // Update timestamp
+  const now = new Date();
+  const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('lastUpdated').textContent  = `🕐 更新：${ts}`;
+  document.getElementById('headerMeta').textContent   = `${monthName} | 資料來源：Google Sheets（Apps Script）`;
+  document.getElementById('footerText').textContent   = `淨淨 Cowork 自動同步｜資料來源：Google Sheets（Apps Script）｜${ts} 更新`;
+
+  // MOM badge
+  const momBadge = total.mom !== null && total.mom !== undefined
+    ? `<span class="kpi-badge ${total.mom >= 0 ? 'badge-red' : 'badge-green'}">${total.mom >= 0 ? '▲' : '▼'} MOM ${sign(total.mom)}</span>`
+    : '';
+
+  // Pie chart — build dynamically based on whether 蝦皮直營 exists
+  const pieSlices = direct
+    ? [
+        { label: `官網 ${pct(web.share)}`,        value: web.revenue,          color: C.web    },
+        { label: `蝦皮 ${pct(shopee.share - (direct.share||0))}`, value: shopee.revenue - (direct.revenue||0), color: C.shopee },
+        { label: `蝦皮直營 ${pct(direct.share||0)}`, value: direct.revenue,     color: C.direct },
+        { label: `MOMO ${pct(momo.share)}`,       value: momo.revenue,          color: C.momo   },
+      ]
+    : [
+        { label: `官網 ${pct(web.share)}`,   value: web.revenue,    color: C.web    },
+        { label: `蝦皮 ${pct(shopee.share)}`, value: shopee.revenue, color: C.shopee },
+        { label: `MOMO ${pct(momo.share)}`,  value: momo.revenue,   color: C.momo   },
+      ];
+
+  const directRow = direct ? `
+    <tr>
+      <td><span class="platform-tag tag-direct">蝦皮直營</span></td>
+      <td>${fmtFull(direct.revenue)}</td>
+      <td>—</td>
+      <td>${pct(direct.share)}</td>
+      <td>—</td><td>—</td><td>—</td><td>—</td>
+    </tr>` : '';
+
+  const hasDirectDaily = daily.direct.some(v => v !== null && v > 0);
+
+  // ── Build HTML ─────────────────────────────────────────────────────────
+  document.getElementById('dashboard').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">📦 總業績（累計）</div>
+        <div class="kpi-value">${fmtFull(total.revenue)}</div>
+        ${momBadge}
+        <div class="kpi-sub">月份目標 ${fmt(total.target)}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">🎯 目標達成率</div>
+        <div class="kpi-value">${pct(total.achievement)}</div>
+        <span class="kpi-badge ${achColor(total.achievement)}">目標 ${fmtFull(total.target)}</span>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">💰 廣告花費</div>
+        <div class="kpi-value">${fmt(total.adSpend)}</div>
+        <div class="kpi-sub">整體 ROAS <strong>${(total.roas||0).toFixed(1)}x</strong></div>
+        <div class="kpi-sub">CPA $${Math.round(total.cpa)}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">👥 流量</div>
+        <div class="kpi-value">${(total.traffic||0).toLocaleString()}</div>
+        <div class="kpi-sub">訂單 <strong>${(total.orders||0).toLocaleString()}</strong> 筆</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">🛒 平均客單價</div>
+        <div class="kpi-value">${fmtFull(total.aov)}</div>
+        <div class="kpi-sub">官網最高 $${Math.round(web.aov)}</div>
+        <div class="kpi-sub">蝦皮最低 $${Math.round(shopee.aov)}</div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="chart-title">📋 各平台業績彙整</div>
+      <div class="chart-sub">${monthName} 累計資料</div>
+      <table>
+        <thead>
+          <tr>
+            <th>平台</th><th>累計業績</th><th>達成率</th><th>業績占比</th>
+            <th>ROAS</th><th>廣告花費</th><th>客單價</th><th>CPA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="platform-tag tag-momo">MOMO</span></td>
+            <td>${fmtFull(momo.revenue)}</td>
+            <td><div class="progress-wrap"><div class="progress-bg"><div class="progress-bar" style="width:${Math.min(momo.achievement*100,100)}%;background:#dc2626"></div></div><span>${pct(momo.achievement)}</span></div></td>
+            <td>${pct(momo.share)}</td>
+            <td>${(momo.roas||0).toFixed(2)}</td>
+            <td>${fmtFull(momo.adSpend)}</td>
+            <td>${fmtFull(momo.aov)}</td>
+            <td>$${Math.round(momo.cpa)}</td>
+          </tr>
+          <tr>
+            <td><span class="platform-tag tag-shopee">蝦皮</span></td>
+            <td>${fmtFull(shopee.revenue)}</td>
+            <td><div class="progress-wrap"><div class="progress-bg"><div class="progress-bar" style="width:${Math.min(shopee.achievement*100,100)}%;background:#ea580c"></div></div><span>${pct(shopee.achievement)}</span></div></td>
+            <td>${pct(shopee.share)}</td>
+            <td>${(shopee.roas||0).toFixed(2)}</td>
+            <td>${fmtFull(shopee.adSpend)}</td>
+            <td>${fmtFull(shopee.aov)}</td>
+            <td>$${Math.round(shopee.cpa)}</td>
+          </tr>
+          <tr>
+            <td><span class="platform-tag tag-web">官網</span></td>
+            <td>${fmtFull(web.revenue)}</td>
+            <td><div class="progress-wrap"><div class="progress-bg"><div class="progress-bar" style="width:${Math.min(web.achievement*100,100)}%;background:#2563eb"></div></div><span>${pct(web.achievement)}</span></div></td>
+            <td>${pct(web.share)}</td>
+            <td>${(web.roas||0).toFixed(2)}</td>
+            <td>${fmtFull(web.adSpend)}</td>
+            <td>${fmtFull(web.aov)}</td>
+            <td>$${Math.round(web.cpa)}</td>
+          </tr>
+          ${directRow}
+          <tr>
+            <td><span class="platform-tag tag-total">全平台</span></td>
+            <td><strong>${fmtFull(total.revenue)}</strong></td>
+            <td><div class="progress-wrap"><div class="progress-bg"><div class="progress-bar" style="width:${Math.min(total.achievement*100,100)}%;background:#1a1a1a"></div></div><span><strong>${pct(total.achievement)}</strong></span></div></td>
+            <td>100%</td>
+            <td><strong>${(total.roas||0).toFixed(2)}</strong></td>
+            <td><strong>${fmtFull(total.adSpend)}</strong></td>
+            <td><strong>${fmtFull(total.aov)}</strong></td>
+            <td><strong>$${Math.round(total.cpa)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">📊 各平台業績占比</div>
+        <div class="chart-sub">${monthName} 業績分佈</div>
+        <div style="height:260px"><canvas id="pieChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📈 各平台 ROAS 比較</div>
+        <div class="chart-sub">廣告投資報酬率</div>
+        <div style="height:260px"><canvas id="roasChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-title">📅 每日業績趨勢</div>
+        <div class="chart-sub">${monthName} 各平台每日走勢</div>
+        <div style="height:300px"><canvas id="lineChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">🎯 業績 vs 月份目標</div>
+        <div class="chart-sub">累計業績對應目標進度</div>
+        <div style="height:260px"><canvas id="targetChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💰 各平台客單價</div>
+        <div class="chart-sub">每筆訂單平均消費金額</div>
+        <div style="height:260px"><canvas id="aovChart"></canvas></div>
+      </div>
+    </div>
+  `;
+
+  // Destroy existing charts before re-creating
+  Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch(e){} });
+  chartInstances = {};
+
+  // ── Pie ────────────────────────────────────────────────────────────────
+  chartInstances.pie = new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: pieSlices.map(s => s.label),
+      datasets: [{ data: pieSlices.map(s => s.value), backgroundColor: pieSlices.map(s => s.color), borderWidth: 3, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 12 }, padding: 12 } },
+        tooltip: { callbacks: { label: ctx => ` $${Math.round(ctx.raw).toLocaleString()}` } }
+      },
+      cutout: '65%'
+    }
+  });
+
+  // ── ROAS Bar ────────────────────────────────────────────────────────────
+  chartInstances.roas = new Chart(document.getElementById('roasChart'), {
+    type: 'bar',
+    data: {
+      labels: ['MOMO','蝦皮','官網','全平台'],
+      datasets: [{ data: [momo.roas, shopee.roas, web.roas, total.roas], backgroundColor: [C.momo, C.shopee, C.web, '#94a3b8'], borderRadius: 8, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ROAS ${(ctx.raw||0).toFixed(2)}x` } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { ticks: { callback: v => v + 'x' }, grid: { color: '#f0f0ec' } }
+      }
+    }
+  });
+
+  // ── Daily Line ──────────────────────────────────────────────────────────
+  const lineDS = [
+    { label: '官網',  data: daily.web,    borderColor: C.web,    backgroundColor: C.web+'22',    tension: 0.4, fill: true,  pointRadius: 4 },
+    { label: '蝦皮',  data: daily.shopee, borderColor: C.shopee, backgroundColor: C.shopee+'22', tension: 0.4, fill: true,  pointRadius: 4 },
+    { label: 'MOMO', data: daily.momo,   borderColor: C.momo,   backgroundColor: C.momo+'22',   tension: 0.4, fill: true,  pointRadius: 4 },
+  ];
+  if (hasDirectDaily) lineDS.push({ label: '蝦皮直營', data: daily.direct, borderColor: C.direct, borderDash: [5,3], tension: 0.4, fill: false, pointRadius: 4 });
+
+  chartInstances.line = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: { labels: daily.dates, datasets: lineDS },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12 }, usePointStyle: true, padding: 16 } },
+        tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => ` ${ctx.dataset.label}: $${(ctx.raw ?? 0).toLocaleString()}` } }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'K' }, grid: { color: '#f0f0ec' } }
+      }
+    }
+  });
+
+  // ── Target vs Actual ────────────────────────────────────────────────────
+  chartInstances.target = new Chart(document.getElementById('targetChart'), {
+    type: 'bar',
+    data: {
+      labels: ['MOMO','蝦皮','官網'],
+      datasets: [
+        { label: '累計業績', data: [momo.revenue, shopee.revenue, web.revenue], backgroundColor: [C.momo, C.shopee, C.web], borderRadius: 6 },
+        { label: '月份目標', data: [momo.target,  shopee.target,  web.target],  backgroundColor: ['#fca5a5','#fdba74','#93c5fd'], borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12 }, usePointStyle: true } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString()}` } }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { ticks: { callback: v => '$' + (v/10000).toFixed(0) + '萬' }, grid: { color: '#f0f0ec' } }
+      }
+    }
+  });
+
+  // ── AOV Bar ─────────────────────────────────────────────────────────────
+  chartInstances.aov = new Chart(document.getElementById('aovChart'), {
+    type: 'bar',
+    data: {
+      labels: ['MOMO','蝦皮','官網','全平台'],
+      datasets: [{ data: [momo.aov, shopee.aov, web.aov, total.aov], backgroundColor: [C.momo, C.shopee, C.web, '#94a3b8'], borderRadius: 8, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` 客單價 $${Math.round(ctx.raw)}` } }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { min: 800, ticks: { callback: v => '$' + v }, grid: { color: '#f0f0ec' } }
+      }
+    }
+  });
+}
+
+// ── Yearly Overview ──────────────────────────────────────────────────────────
+let yearlyCharts = {};
+
+function renderYearlyOverview() {
+  const months = MONTH_KEYS.filter(k => allData[k]);
+  if (!months.length) return;
+
+  let ytdRevenue = 0, ytdAds = 0, ytdTraffic = 0, ytdOrders = 0;
+  const mRevenue = [], mTarget = [], mAch = [], mAds = [], mRoas = [], mTraffic = [], mAov = [], mLabels = [];
+
+  months.forEach(k => {
+    const total = allData[k].summary['總'] || {};
+    if (!total.revenue) return;
+    ytdRevenue  += total.revenue  || 0;
+    ytdAds      += total.adSpend  || 0;
+    ytdTraffic  += total.traffic  || 0;
+    ytdOrders   += total.orders   || 0;
+    mLabels.push(MONTH_LABELS[k]);
+    mRevenue.push(total.revenue  || 0);
+    mTarget.push( total.target   || 0);
+    mAch.push(    (total.achievement || 0) * 100);
+    mAds.push(    total.adSpend  || 0);
+    mRoas.push(   total.roas     || 0);
+    mTraffic.push(total.traffic  || 0);
+    mAov.push(    total.aov      || 0);
+  });
+
+  const ytdROAS = ytdAds > 0 ? (ytdRevenue / ytdAds) : 0;
+  const loadedMonths = mLabels.length;
+
+  // ── KPI cards ──────────────────────────────────────────────────────────────
+  document.getElementById('yearlySubTitle').textContent =
+    `已載入 ${loadedMonths} 個月資料（1月–4月）`;
+
+  document.getElementById('yearlyKPIs').innerHTML = `
+    <div class="yearly-kpi-card">
+      <div class="yearly-kpi-label">📦 YTD 累計業績</div>
+      <div class="yearly-kpi-value">${'$' + Math.round(ytdRevenue).toLocaleString()}</div>
+      <div class="yearly-kpi-sub">共 ${loadedMonths} 個月累計</div>
+    </div>
+    <div class="yearly-kpi-card">
+      <div class="yearly-kpi-label">💰 YTD 廣告花費</div>
+      <div class="yearly-kpi-value">${'$' + Math.round(ytdAds).toLocaleString()}</div>
+      <div class="yearly-kpi-sub">整體 ROAS ${ytdROAS.toFixed(2)}x</div>
+    </div>
+    <div class="yearly-kpi-card">
+      <div class="yearly-kpi-label">🎯 平均達成率</div>
+      <div class="yearly-kpi-value">${(mAch.reduce((a,b)=>a+b,0)/mAch.length).toFixed(1)}%</div>
+      <div class="yearly-kpi-sub">各月平均</div>
+    </div>
+    <div class="yearly-kpi-card">
+      <div class="yearly-kpi-label">👥 YTD 流量</div>
+      <div class="yearly-kpi-value">${ytdTraffic.toLocaleString()}</div>
+      <div class="yearly-kpi-sub">訂單 ${ytdOrders.toLocaleString()} 筆</div>
+    </div>
+  `;
+
+  // ── Monthly revenue chart ──────────────────────────────────────────────────
+  Object.values(yearlyCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  yearlyCharts = {};
+
+  yearlyCharts.revenue = new Chart(document.getElementById('yearlyRevenueChart'), {
+    type: 'bar',
+    data: {
+      labels: mLabels,
+      datasets: [
+        { label: '累計業績', data: mRevenue, backgroundColor: '#e2e8f0', borderRadius: 6 },
+        { label: '月份目標', data: mTarget,  backgroundColor: '#475569', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: '#888', font: { size: 11 }, usePointStyle: true } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString()}` } }
+      },
+      scales: {
+        x: { grid: { color: '#2a2a2a' }, ticks: { color: '#666' } },
+        y: { grid: { color: '#2a2a2a' }, ticks: { color: '#666', callback: v => '$' + (v/10000).toFixed(0) + '萬' } }
+      }
+    }
+  });
+
+  // ── Achievement rate chart ─────────────────────────────────────────────────
+  yearlyCharts.ach = new Chart(document.getElementById('yearlyAchChart'), {
+    type: 'line',
+    data: {
+      labels: mLabels,
+      datasets: [{
+        label: '達成率',
+        data: mAch,
+        borderColor: '#60a5fa',
+        backgroundColor: '#60a5fa22',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 6,
+        pointBackgroundColor: '#60a5fa'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` 達成率 ${ctx.raw.toFixed(1)}%` } }
+      },
+      scales: {
+        x: { grid: { color: '#2a2a2a' }, ticks: { color: '#666' } },
+        y: {
+          min: 0, max: Math.max(110, ...mAch) + 10,
+          grid: { color: '#2a2a2a' },
+          ticks: { color: '#666', callback: v => v + '%' }
+        }
+      }
+    }
+  });
+
+  // ── Monthly table ──────────────────────────────────────────────────────────
+  let totalRev = 0, totalTgt = 0, totalAds2 = 0, totalTrf = 0;
+  const rows = mLabels.map((lbl, i) => {
+    totalRev  += mRevenue[i];
+    totalTgt  += mTarget[i];
+    totalAds2 += mAds[i];
+    totalTrf  += mTraffic[i];
+    const achCls = mAch[i] >= 100 ? '#4ade80' : mAch[i] >= 70 ? '#facc15' : '#f87171';
+    return `<tr>
+      <td><span class="month-tag">${lbl}</span></td>
+      <td>$${mRevenue[i].toLocaleString()}</td>
+      <td>$${mTarget[i].toLocaleString()}</td>
+      <td>
+        <div class="ach-bar-wrap">
+          <div class="ach-bar-bg"><div class="ach-bar" style="width:${Math.min(mAch[i],100)}%;background:${achCls}"></div></div>
+          <span style="color:${achCls}">${mAch[i].toFixed(1)}%</span>
+        </div>
+      </td>
+      <td>$${mAds[i].toLocaleString()}</td>
+      <td>${mRoas[i].toFixed(2)}x</td>
+      <td>${mTraffic[i].toLocaleString()}</td>
+      <td>$${Math.round(mAov[i]).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  const ytdAch = totalTgt > 0 ? (totalRev / totalTgt * 100) : 0;
+  const ytdRoasFull = totalAds2 > 0 ? (totalRev / totalAds2) : 0;
+  const footerRow = `<tr>
+    <td><span class="month-tag" style="background:#444;color:#fff">全年 YTD</span></td>
+    <td>$${totalRev.toLocaleString()}</td>
+    <td>$${totalTgt.toLocaleString()}</td>
+    <td>
+      <div class="ach-bar-wrap">
+        <div class="ach-bar-bg"><div class="ach-bar" style="width:${Math.min(ytdAch,100)}%;background:#60a5fa"></div></div>
+        <span style="color:#60a5fa">${ytdAch.toFixed(1)}%</span>
+      </div>
+    </td>
+    <td>$${totalAds2.toLocaleString()}</td>
+    <td>${ytdRoasFull.toFixed(2)}x</td>
+    <td>${totalTrf.toLocaleString()}</td>
+    <td>—</td>
+  </tr>`;
+
+  document.getElementById('yearlyTableBody').innerHTML = rows + footerRow;
+}
+
+// ── GA4 ──────────────────────────────────────────────────────────────────────
+let ga4Data = null;
+let ga4Charts = {};
+
+async function fetchGA4() {
+  const r = await fetch(SCRIPT_URL + '?sheet=ga4');
+  const json = await r.json();
+  if (json.status !== 'ok') throw new Error(json.message || 'GA4 載入失敗');
+  return json;
+}
+
+function renderGA4(data) {
+  Object.values(ga4Charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  ga4Charts = {};
+
+  // ── KPI Summary ────────────────────────────────────────────────────────────
+  const totalSessions  = data.trafficSource.reduce((s,r) => s + parseInt(r.sessions),  0);
+  const totalUsers     = data.trafficSource.reduce((s,r) => s + parseInt(r.totalUsers), 0);
+  const totalConv      = data.trafficSource.reduce((s,r) => s + parseInt(r.conversions), 0);
+  const totalRevGA4    = data.trafficSource.reduce((s,r) => s + parseFloat(r.totalRevenue), 0);
+  const lastFunnel     = data.funnelTrend[data.funnelTrend.length - 1] || {};
+  const convRate       = totalSessions > 0 ? (totalConv / totalSessions * 100).toFixed(2) : '0';
+
+  // ── 購物旅程綜合評估 ──────────────────────────────────────────────────────
+  // 從 funnelTrend 加總近30天
+  const fSum = k => data.funnelTrend.reduce((s,r) => s + parseInt(r[k]||0), 0);
+  const jSessions  = totalSessions;
+  const jCarts     = fSum('addToCarts');
+  const jCheckouts = fSum('checkouts');
+  const jPurchases = fSum('transactions');
+  // 試算表官網數據 (最新月份)
+  const latestKey   = [...MONTH_KEYS].reverse().find(k => allData[k]);
+  const webSheet    = latestKey ? (allData[latestKey].summary['官網'] || {}) : {};
+  const sheetOrders = webSheet.orders  || 0;
+  const sheetRevWeb = webSheet.revenue || 0;
+
+  // 旅程步驟（Sessions → 購物車 → 結帳 → 購買），留存率均對比工作階段
+  const journeySteps = [
+    { label: '工作階段',   val: jSessions,  color: '#3b82f6', sub: '訪客進入網站' },
+    { label: '加入購物車', val: jCarts,     color: '#f97316', sub: `對比工作階段 ${jSessions > 0 ? (jCarts/jSessions*100).toFixed(1) : 0}%` },
+    { label: '到達結帳',   val: jCheckouts, color: '#8b5cf6', sub: `對比工作階段 ${jSessions > 0 ? (jCheckouts/jSessions*100).toFixed(1) : 0}%` },
+    { label: '完成購買',   val: jPurchases, color: '#22c55e', sub: `對比工作階段 ${jSessions > 0 ? (jPurchases/jSessions*100).toFixed(1) : 0}%` },
+  ];
+  const maxStep = jSessions;
+
+  // 找最大落差步驟（哪個環節流失最多）
+  let biggestDropIdx = 1;
+  let biggestDropPct = 0;
+  for (let i = 1; i < journeySteps.length; i++) {
+    const prev = journeySteps[i-1].val;
+    const curr = journeySteps[i].val;
+    const drop = prev > 0 ? (1 - curr/prev) * 100 : 0;
+    if (drop > biggestDropPct) { biggestDropPct = drop; biggestDropIdx = i; }
+  }
+  const dropLabel = journeySteps[biggestDropIdx].label;
+  const prevLabel = journeySteps[biggestDropIdx - 1].label;
+
+  // GA4 vs 試算表對照
+  const ga4PurchaseVsSheet = sheetOrders > 0 && jPurchases > 0
+    ? `GA4 記錄 ${jPurchases.toLocaleString()} 筆購買，試算表官網 ${sheetOrders.toLocaleString()} 筆訂單`
+    : `GA4 購買數 ${jPurchases.toLocaleString()} 筆`;
+
+  // anomalyNote 已移除（使用者自行了解 GA4 資料特性）
+  const anomalyNote = '';
+
+  // 留存率（對比工作階段）
+  const cartRetention   = jSessions > 0 ? jCarts     / jSessions * 100 : 0;
+  const checkRetention  = jSessions > 0 ? jCheckouts / jSessions * 100 : 0;
+  const purchRetention  = jSessions > 0 ? jPurchases / jSessions * 100 : 0;
+
+  // 旅程建議（以工作階段留存率為基準）
+  const journeyInsights = [];
+  if (cartRetention < 3)
+    journeyInsights.push('加入購物車留存率低於 3%，建議加強商品頁 CTA、促銷資訊及頁面瀏覽深度');
+  if (checkRetention < 1)
+    journeyInsights.push('到達結帳留存率低於 1%，購物車流失嚴重，建議優化購物車頁面及結帳入口');
+  if (purchRetention < 0.5)
+    journeyInsights.push('完成購物留存率低於 0.5%，建議縮短結帳步驟、增加支付方式並強化信任徽章');
+  if (journeyInsights.length === 0)
+    journeyInsights.push(`整體轉換旅程正常，完成購物留存率 ${purchRetention.toFixed(2)}%，持續優化各環節可帶來最大改善`);
+
+  // 直條圖（CSS-based，對比工作階段留存率）
+  const maxBarH = 140;
+  const funnelCols = [
+    { label: '工作階段',   val: jSessions,  pct: 100,            color: '#3b82f6' },
+    { label: '加入購物車', val: jCarts,     pct: cartRetention,  color: '#f97316' },
+    { label: '到達結帳',   val: jCheckouts, pct: checkRetention, color: '#8b5cf6' },
+    { label: '完成購買',   val: jPurchases, pct: purchRetention, color: '#22c55e' },
+  ];
+
+  const vertBarHTML = funnelCols.map((s, i) => {
+    const barH = Math.max(s.pct / 100 * maxBarH, 6);
+    const pctLabel = i === 0 ? '100%' : s.pct.toFixed(1) + '%';
+    const arrow = i > 0 ? `<div style="position:absolute;left:-14px;bottom:${barH/2}px;font-size:14px;color:#ddd">→</div>` : '';
+    return `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative">
+      ${arrow}
+      <div style="font-size:13px;font-weight:700;color:#888;margin-bottom:2px">${pctLabel}</div>
+      <div style="font-size:14px;font-weight:800;color:${s.color};margin-bottom:6px">${s.val.toLocaleString()}</div>
+      <div style="width:72%;min-width:44px;height:${barH}px;background:${s.color};border-radius:8px 8px 0 0;opacity:0.92"></div>
+      <div style="width:100%;height:2px;background:${s.color}30;margin-bottom:10px"></div>
+      <div style="font-size:11px;color:#555;font-weight:600;text-align:center;line-height:1.4">${s.label}</div>
+    </div>`;
+  }).join('');
+
+  const journeyBlock = `
+  <div class="chart-card ga4-full" style="margin-bottom:20px;border:2px solid #e0e7ff;background:linear-gradient(135deg,#f0f4ff 0%,#fff 100%)">
+    <div style="margin-bottom:20px">
+      <div class="chart-title" style="color:#2563eb">🛒 官網購物旅程分析（近30天）</div>
+      <div class="chart-sub">GA4 事件追蹤｜右側百分比均對比工作階段留存率</div>
+    </div>
+
+    <!-- 直條漏斗圖 -->
+    <div style="display:flex;align-items:flex-end;gap:8px;background:#fafaf8;border-radius:12px;padding:20px 24px 12px;margin-bottom:20px;min-height:220px">
+      ${vertBarHTML}
+    </div>
+
+    <!-- 留存率 3 指標 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e7ff">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px">🛒 加入購物車留存率</div>
+        <div style="font-size:22px;font-weight:800;color:${cartRetention>=3?'#dc2626':'#16a34a'}">${cartRetention.toFixed(1)}%</div>
+        <div style="font-size:10px;color:#bbb;margin-top:4px">${jCarts.toLocaleString()} / ${jSessions.toLocaleString()} 工作階段</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e7ff">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px">💳 到達結帳留存率</div>
+        <div style="font-size:22px;font-weight:800;color:${checkRetention>=1?'#dc2626':'#16a34a'}">${checkRetention.toFixed(1)}%</div>
+        <div style="font-size:10px;color:#bbb;margin-top:4px">${jCheckouts.toLocaleString()} / ${jSessions.toLocaleString()} 工作階段</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e7ff">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px">✅ 完成購物留存率</div>
+        <div style="font-size:22px;font-weight:800;color:${purchRetention>=0.5?'#dc2626':'#16a34a'}">${purchRetention.toFixed(2)}%</div>
+        <div style="font-size:10px;color:#bbb;margin-top:4px">${jPurchases.toLocaleString()} / ${jSessions.toLocaleString()} 工作階段</div>
+      </div>
+    </div>
+
+    <!-- 優化建議 -->
+    <div style="padding:12px 16px;background:#fff3cd;border-radius:10px;border:1px solid #ffc107">
+      <div style="font-size:12px;font-weight:700;color:#856404;margin-bottom:8px">💡 優化建議</div>
+      ${journeyInsights.map((s,i) => `<div style="font-size:12px;color:#6b4c11;padding:4px 0;${i<journeyInsights.length-1?'border-bottom:1px solid #ffeeba':''}">${i+1}. ${s}</div>`).join('')}
+    </div>
+  </div>`;
+
+  document.getElementById('ga4Dashboard').innerHTML = journeyBlock + `
+    <!-- KPI Cards -->
+    <div class="ga4-kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">📊 總工作階段（30天）</div>
+        <div class="kpi-value">${totalSessions.toLocaleString()}</div>
+        <div class="kpi-sub">不重複用戶 ${totalUsers.toLocaleString()}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">🛒 轉換數</div>
+        <div class="kpi-value">${totalConv.toLocaleString()}</div>
+        <div class="kpi-sub">轉換率 ${convRate}%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">💰 GA4 收益（30天）</div>
+        <div class="kpi-value">$${Math.round(totalRevGA4).toLocaleString()}</div>
+        <div class="kpi-sub">含電商交易金額</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">📱 行動裝置佔比</div>
+        <div class="kpi-value">${(parseInt((data.device.find(d=>d.deviceCategory==='mobile')||{sessions:0}).sessions)/totalSessions*100).toFixed(1)}%</div>
+        <div class="kpi-sub">桌機 ${(parseInt((data.device.find(d=>d.deviceCategory==='desktop')||{sessions:0}).sessions)/totalSessions*100).toFixed(1)}%</div>
+      </div>
+    </div>
+
+    <!-- 流量來源 + 裝置 -->
+    <div class="ga4-2col">
+      <div class="chart-card">
+        <div class="chart-title">🌐 流量來源分佈</div>
+        <div class="chart-sub">過去 30 天工作階段來源</div>
+        <div style="height:280px"><canvas id="ga4TrafficChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📱 裝置類型</div>
+        <div class="chart-sub">工作階段與收益分佈</div>
+        <div style="height:280px"><canvas id="ga4DeviceChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 轉換漏斗 -->
+    <div class="chart-card ga4-full">
+      <div class="chart-title">🔽 電商轉換漏斗（30天總計）</div>
+      <div class="chart-sub">每日平均：Sessions → 加購 → 結帳 → 購買</div>
+      ${buildFunnel(data.funnelTrend)}
+    </div>
+
+    <!-- 每日漏斗趨勢 -->
+    <div class="chart-card ga4-full">
+      <div class="chart-title">📅 每日轉換趨勢</div>
+      <div class="chart-sub">加購 / 結帳 / 購買 逐日走勢</div>
+      <div style="height:280px"><canvas id="ga4FunnelChart"></canvas></div>
+    </div>
+
+    <!-- 年齡 + 地區 -->
+    <div class="ga4-2col">
+      <div class="chart-card">
+        <div class="chart-title">👥 受眾年齡分佈</div>
+        <div class="chart-sub">已知年齡用戶（Sessions）</div>
+        <div style="height:260px"><canvas id="ga4AgeChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📍 地區流量 Top 10</div>
+        <div class="chart-sub">Sessions 排名</div>
+        <div style="padding:8px 0">${buildRegionBars(data.region)}</div>
+      </div>
+    </div>
+  `;
+
+  // ── Traffic Source Donut ───────────────────────────────────────────────────
+  const srcColors = ['#3b82f6','#f97316','#8b5cf6','#22c55e','#94a3b8','#ef4444','#eab308','#06b6d4','#ec4899','#84cc16','#64748b'];
+  const srcFiltered = data.trafficSource.filter(r => r.sessionDefaultChannelGroup !== 'Unassigned');
+  ga4Charts.traffic = new Chart(document.getElementById('ga4TrafficChart'), {
+    type: 'doughnut',
+    data: {
+      labels: srcFiltered.map(r => r.sessionDefaultChannelGroup),
+      datasets: [{
+        data: srcFiltered.map(r => parseInt(r.sessions)),
+        backgroundColor: srcColors,
+        borderWidth: 3, borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: {
+        legend: { position: 'right', labels: { font: {size:11}, padding:10 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw.toLocaleString()} 工作階段` } }
+      }
+    }
+  });
+
+  // ── Device Bar ────────────────────────────────────────────────────────────
+  ga4Charts.device = new Chart(document.getElementById('ga4DeviceChart'), {
+    type: 'bar',
+    data: {
+      labels: data.device.map(d => d.deviceCategory === 'mobile' ? '行動裝置' : d.deviceCategory === 'desktop' ? '桌機' : '平板'),
+      datasets: [
+        { label: '工作階段', data: data.device.map(d => parseInt(d.sessions)), backgroundColor: ['#3b82f6','#94a3b8','#60a5fa'], borderRadius: 6, yAxisID: 'y' },
+        { label: '收益', data: data.device.map(d => parseFloat(d.purchaseRevenue)), backgroundColor: ['#bfdbfe','#e2e8f0','#dbeafe'], borderRadius: 6, yAxisID: 'y2' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font:{size:11} } } },
+      scales: {
+        y:  { position: 'left',  ticks: { callback: v => v.toLocaleString() }, grid: { color:'#f0f0ec' } },
+        y2: { position: 'right', ticks: { callback: v => '$' + (v/1000).toFixed(0)+'K' }, grid: { display: false } },
+        x:  { grid: { display: false } }
+      }
+    }
+  });
+
+  // ── Funnel Trend Line ─────────────────────────────────────────────────────
+  const fDates = data.funnelTrend.slice(-30).map(r => `${r.date.slice(4,6)}/${r.date.slice(6,8)}`);
+  ga4Charts.funnel = new Chart(document.getElementById('ga4FunnelChart'), {
+    type: 'line',
+    data: {
+      labels: fDates,
+      datasets: [
+        { label: '加入購物車', data: data.funnelTrend.slice(-30).map(r => parseInt(r.addToCarts)),  borderColor: '#f97316', backgroundColor: '#f9731620', tension: 0.4, fill: true, pointRadius: 3 },
+        { label: '進入結帳',   data: data.funnelTrend.slice(-30).map(r => parseInt(r.checkouts)),   borderColor: '#8b5cf6', backgroundColor: '#8b5cf620', tension: 0.4, fill: true, pointRadius: 3 },
+        { label: '完成購買',   data: data.funnelTrend.slice(-30).map(r => parseInt(r.transactions)),borderColor: '#22c55e', backgroundColor: '#22c55e20', tension: 0.4, fill: true, pointRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font:{size:11}, usePointStyle:true, padding:14 } },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { grid: { display:false } },
+        y: { grid: { color:'#f0f0ec' }, ticks: { callback: v => v.toLocaleString() } }
+      }
+    }
+  });
+
+  // ── Age Bar ───────────────────────────────────────────────────────────────
+  const ageFiltered = data.age.filter(r => r.userAgeBracket !== 'unknown').sort((a,b) => a.userAgeBracket.localeCompare(b.userAgeBracket));
+  ga4Charts.age = new Chart(document.getElementById('ga4AgeChart'), {
+    type: 'bar',
+    data: {
+      labels: ageFiltered.map(r => r.userAgeBracket),
+      datasets: [{ data: ageFiltered.map(r => parseInt(r.sessions)), backgroundColor: '#3b82f6', borderRadius: 6 }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()} 工作階段` } } },
+      scales: {
+        x: { grid: { color:'#f0f0ec' }, ticks: { callback: v => v.toLocaleString() } },
+        y: { grid: { display:false } }
+      }
+    }
+  });
+}
+
+function buildFunnel(trend) {
+  const sum = k => trend.reduce((s,r) => s + parseInt(r[k]||0), 0);
+  const sessions  = sum('sessions');
+  const carts     = sum('addToCarts');
+  const checkouts = sum('checkouts');
+  const purchases = sum('transactions');
+  const steps = [
+    { label: '工作階段',   val: sessions,  color: '#3b82f6' },
+    { label: '加入購物車', val: carts,     color: '#f97316' },
+    { label: '到達結帳',   val: checkouts, color: '#8b5cf6' },
+    { label: '完成購買',   val: purchases, color: '#22c55e' },
+  ];
+  return '<div class="funnel-bars">' + steps.map((s,i) => {
+    const pct = sessions > 0 ? (s.val / sessions * 100) : 0;
+    const retentionPct = i === 0 ? '—' : pct.toFixed(1) + '%';
+    return `<div class="funnel-row">
+      <div class="funnel-label">${s.label}</div>
+      <div class="funnel-track">
+        <div class="funnel-fill" style="width:${Math.min(Math.max(pct,2),100)}%;background:${s.color}">
+          ${s.val.toLocaleString()}
+        </div>
+      </div>
+      <div class="funnel-pct">${retentionPct}</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function buildRegionBars(regions) {
+  const max = Math.max(...regions.map(r => parseInt(r.sessions)));
+  return regions.map(r => {
+    const pct = parseInt(r.sessions) / max * 100;
+    const name = r.region === '(not set)' ? '未分類' : r.region;
+    return `<div class="region-bar-row">
+      <div class="region-name" title="${name}">${name}</div>
+      <div class="region-track"><div class="region-fill" style="width:${pct}%"></div></div>
+      <div class="region-val">${parseInt(r.sessions).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Fetch & Init ─────────────────────────────────────────────────────────────
+async function fetchMonth(key) {
+  const r = await fetch(SCRIPT_URL + '?sheet=' + encodeURIComponent(key));
+  const text = await r.text();
+  if (text.startsWith('ERROR:')) throw new Error(text);
+  return parseCSV(text);
+}
+
+async function init() {
+  try {
+    const results = await Promise.allSettled(MONTH_KEYS.map(k => fetchMonth(k)));
+    MONTH_KEYS.forEach((k, i) => {
+      if (results[i].status === 'fulfilled') allData[k] = results[i].value;
+    });
+
+    const loaded = MONTH_KEYS.filter(k => allData[k]);
+    if (!loaded.length) throw new Error('所有月份資料載入失敗');
+    activeMonth = loaded[loaded.length - 1];
+
+    renderHomepage();
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        if (btn.dataset.view === 'home') {
+          showView('home');
+          renderHomepage();
+          return;
+        }
+
+        if (btn.dataset.view === 'ga4') {
+          showView('ga4');
+          if (!ga4Loaded) {
+            ga4Loaded = true;
+            try {
+              const data = await fetchGA4();
+              renderGA4(data);
+            } catch(err) {
+              document.getElementById('ga4Dashboard').innerHTML =
+                `<div class="error">⚠️ GA4 資料載入失敗：${err.message}<br>請確認 Apps Script 已授權 Analytics 存取權限。</div>`;
+            }
+          }
+          return;
+        }
+
+        if (!allData[btn.dataset.month]) {
+          showView('month');
+          document.getElementById('dashboard').innerHTML =
+            `<div class="error">⚠️ ${MONTH_LABELS[btn.dataset.month] || btn.dataset.month} 的資料尚未載入。</div>`;
+          return;
+        }
+        activeMonth = btn.dataset.month;
+        showView('month');
+        renderDashboard(activeMonth);
+        renderYearlyOverview();
+      });
+    });
+
+  } catch(err) {
+    document.getElementById('homeContent').innerHTML =
+      `<div class="error">⚠️ 資料載入失敗：${err.message}<br>請確認 Google Sheets Apps Script 已正確部署。</div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
