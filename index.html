@@ -665,53 +665,61 @@ function renderHomepage() {
     return `<span style="display:inline-block;background:${c}18;color:${c};font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;margin-top:3px">${t}</span>`;
   }
 
-  // 週環比洞察（聚焦流量、轉換、客單、ROAS）
+  // 週環比洞察（方向一：四象限 / 方向二：業績影響 / 方向三：預算建議）
   function platformInsight(label, d, wkM) {
-    const parts = [];
+    const lines = [];
     const trfPct  = wkM.nearTrf > 0 && wkM.prevTrf > 0 ? chgPct(wkM.nearTrf, wkM.prevTrf) : null;
     const crDelta = wkM.nearCR - wkM.prevCR;
     const aovPct  = wkM.nearAOV > 0 && wkM.prevAOV > 0 ? chgPct(wkM.nearAOV, wkM.prevAOV) : null;
     const roasPct = wkM.nearROAS > 0 && wkM.prevROAS > 0 ? chgPct(wkM.nearROAS, wkM.prevROAS) : null;
-
-    // 流量分析
-    if (trfPct !== null) {
-      if (trfPct < -15)      parts.push(`流量週環比 ${trfPct.toFixed(1)}%，引流效率明顯下降，建議補充投放或活動刺激`);
-      else if (trfPct < -5)  parts.push(`流量週環比 ${trfPct.toFixed(1)}%，小幅下滑，留意引流成效`);
-      else if (trfPct > 15)  parts.push(`流量週環比 +${trfPct.toFixed(1)}%，引流效果良好`);
-      else if (trfPct > 3)   parts.push(`流量週環比 +${trfPct.toFixed(1)}%，流量穩健成長`);
-      else                   parts.push(`流量週環比 ${trfPct >= 0 ? '+' : ''}${trfPct.toFixed(1)}%，流量平穩`);
-    }
-
-    // 轉換率分析（排除前期資料不足導致 prevCR 異常低的情況：prevCR < nearCR * 0.3）
     const crReliable = wkM.prevCR > 0 && wkM.nearCR > 0 && (wkM.prevCR / wkM.nearCR >= 0.3);
-    if (crReliable && Math.abs(crDelta) > 0.1) {
-      if (crDelta < -0.5)    parts.push(`轉換率由 ${wkM.prevCR.toFixed(2)}% 降至 ${wkM.nearCR.toFixed(2)}%，建議檢視商品頁與結帳流程`);
-      else if (crDelta < 0)  parts.push(`轉換率由 ${wkM.prevCR.toFixed(2)}% 微降至 ${wkM.nearCR.toFixed(2)}%，持續觀察`);
-      else if (crDelta > 0.5) parts.push(`轉換率由 ${wkM.prevCR.toFixed(2)}% 提升至 ${wkM.nearCR.toFixed(2)}%，轉換表現明顯改善`);
-      else                   parts.push(`轉換率由 ${wkM.prevCR.toFixed(2)}% 小升至 ${wkM.nearCR.toFixed(2)}%`);
-    } else if (wkM.nearCR > 0) {
-      parts.push(`轉換率 ${wkM.nearCR.toFixed(2)}%，前期資料不足，暫無週環比`);
+
+    // ── 方向一：流量 × 轉換率 四象限診斷 ───────────────────────────────────
+    if (trfPct !== null && crReliable) {
+      const trfUp = trfPct > 0;
+      const crUp  = crDelta > 0.1;
+      if (trfUp && crUp)
+        lines.push(`📈 流量＋轉換率雙升，素材與承接頁效率佳，建議加碼預算複製成功組合`);
+      else if (trfUp && !crUp)
+        lines.push(`⚠️ 流量↑但轉換率↓（${wkM.nearCR.toFixed(2)}%），引入受眾與商品匹配度不足，建議收窄投放受眾或優化商品頁`);
+      else if (!trfUp && crUp)
+        lines.push(`🎯 流量↓但轉換率↑（${wkM.nearCR.toFixed(2)}%），流量精準但量不足，建議擴大受眾或增加版位放大規模`);
+      else
+        lines.push(`🚨 流量與轉換率同步下滑，建議暫停低效素材，重新審視商品競爭力與定價`);
+    } else if (trfPct !== null) {
+      if (trfPct < -10)     lines.push(`流量週環比 ${trfPct.toFixed(1)}%，引流效率下降，建議補強投放或活動刺激`);
+      else if (trfPct > 10) lines.push(`流量週環比 +${trfPct.toFixed(1)}%，引流成效良好`);
+      else if (wkM.nearCR > 0) lines.push(`流量平穩，轉換率 ${wkM.nearCR.toFixed(2)}%`);
     }
 
-    // 客單價分析
-    if (aovPct !== null && Math.abs(aovPct) > 3) {
-      if (aovPct < -8)       parts.push(`客單價週環比 ${aovPct.toFixed(1)}%，消費力下滑，建議加強搭售或升級推薦`);
-      else if (aovPct < 0)   parts.push(`客單價週環比 ${aovPct.toFixed(1)}%，小幅下降，可考慮滿額優惠策略`);
-      else if (aovPct > 8)   parts.push(`客單價週環比 +${aovPct.toFixed(1)}%，消費力提升，可強化高單價品組合`);
-      else                   parts.push(`客單價週環比 +${aovPct.toFixed(1)}%，消費力穩定成長`);
+    // ── 方向二：轉換率每提升 1pp 的業績影響 ─────────────────────────────────
+    if (wkM.nearTrf > 0 && wkM.nearAOV > 0 && wkM.nearCR > 0) {
+      const crImpact = Math.round(wkM.nearTrf * 0.01 * wkM.nearAOV);
+      if (crImpact >= 300)
+        lines.push(`💰 轉換率每提升 1pp，以本週流量可多創造 <strong>$${crImpact.toLocaleString()}</strong> 業績`);
     }
 
-    // ROAS 分析
-    if (roasPct !== null && Math.abs(roasPct) > 5) {
-      if (roasPct < -15)     parts.push(`ROAS 週環比 ${roasPct.toFixed(1)}%，廣告效率明顯下滑，建議立即檢視素材與受眾設定`);
-      else if (roasPct < 0)  parts.push(`ROAS 週環比 ${roasPct.toFixed(1)}%，廣告效益下滑，留意素材疲勞`);
-      else if (roasPct > 15) parts.push(`ROAS 週環比 +${roasPct.toFixed(1)}%，廣告效益顯著提升`);
-      else                   parts.push(`ROAS 週環比 +${roasPct.toFixed(1)}%，廣告效益穩定`);
+    // ── 方向三：ROAS × 廣告費 預算建議 ──────────────────────────────────────
+    if (roasPct !== null && wkM.nearROAS > 0) {
+      if (wkM.nearROAS >= 5 && roasPct > 10)
+        lines.push(`🚀 ROAS ${wkM.nearROAS.toFixed(1)} 且週環比 +${roasPct.toFixed(1)}%，有條件加碼廣告預算擴大規模`);
+      else if (roasPct < -20)
+        lines.push(`ROAS 週環比 ${roasPct.toFixed(1)}%，廣告效率大幅下滑，建議暫停低效素材並重新測試受眾`);
+      else if (wkM.nearROAS < 2 && wkM.nearAds > 0)
+        lines.push(`ROAS ${wkM.nearROAS.toFixed(1)} 偏低（廣告費 $${Math.round(wkM.nearAds).toLocaleString()}），效益不佳，建議縮減預算或優化素材`);
     }
 
-    if (parts.length === 0) parts.push(`各指標週環比穩定，持續監控流量與轉換效率`);
+    // 補充：客單價異常（填充用）
+    if (lines.length < 2 && aovPct !== null && Math.abs(aovPct) > 8) {
+      if (aovPct > 0) lines.push(`客單價週環比 +${aovPct.toFixed(1)}%，消費力提升，可強化高單價品組合`);
+      else            lines.push(`客單價週環比 ${aovPct.toFixed(1)}%，消費力下滑，建議加強搭售或升級推薦`);
+    }
 
-    return parts.slice(0, 2).join('；');
+    if (lines.length === 0) lines.push(`各指標週環比穩定，持續監控流量與轉換效率`);
+    // 第一條直接顯示，後續換行
+    return lines.slice(0, 3).map((l, i) =>
+      i === 0 ? l : `<div style="margin-top:5px;padding-top:5px;border-top:1px solid #e8e8f0">${l}</div>`
+    ).join('');
   }
 
   // ── 平台定義 ──────────────────────────────────────────────────────────────
@@ -947,9 +955,11 @@ function parseCSV(csv) {
     const name = row[0].trim();
     if (name) {
       if (name === '蝦皮直營') {
-        // 蝦皮直營只有業績，位於 AA 欄 (index 26)
+        // 蝦皮直營：summary 業績在 B 欄（row[1]，與其他平台相同）
+        // AA 欄（row[26]）是每日數據區段的位置，不適用於 summary
+        // 其餘欄位（流量/訂單/廣告費等）蝦皮直營無此數據，全部歸零避免位移
         summary[name] = {
-          revenue: parseFloat(row[26]) || 0,
+          revenue: parseFloat(row[1]) || 0,
           share: 0,   // 後面依總業績動態算
           mom: null, target: 0, achievement: 0,
           traffic: 0, orders: 0, aov: 0,
@@ -1516,7 +1526,7 @@ function renderGA4(data) {
   const cartRetention  = jSessions > 0 ? jCarts      / jSessions * 100 : 0;
   const purchRetention = jSessions > 0 ? jPurchases  / jSessions * 100 : 0;
 
-  // 旅程建議
+  // 旅程建議（30天）
   const journeyInsights = [];
   if (viewRetention < 10)
     journeyInsights.push('商品瀏覽留存率低於 10%，建議優化首頁推薦、分類導航與搜尋功能，引導用戶深入瀏覽商品');
@@ -1526,6 +1536,50 @@ function renderGA4(data) {
     journeyInsights.push('完成購物留存率低於 0.5%，建議縮短結帳步驟、增加支付方式並強化信任徽章');
   if (journeyInsights.length === 0)
     journeyInsights.push(`整體轉換旅程表現良好，完成購物留存率 ${purchRetention.toFixed(2)}%，持續優化各環節可帶來最大改善`);
+
+  // ── 方向二+三：漏斗業績影響計算（30天）─────────────────────────────────
+  // 取官網客單價作為 AOV 基準
+  const _ga4LatestKey = [...MONTH_KEYS].reverse().find(k => allData[k]);
+  const webSheet = _ga4LatestKey ? (allData[_ga4LatestKey].summary['官網'] || {}) : {};
+  const webAOV = webSheet.aov || 0;
+  const purchPerCart30 = jCarts     > 0 ? jPurchases / jCarts     : 0;
+  const cartPerView30  = jViewItems > 0 ? jCarts     / jViewItems : 0;
+  const funnelGaps30 = [];
+  if (webAOV > 0) {
+    const bV = 20, bC = 8, bP = 2;
+    if (viewRetention < bV) {
+      const lost = Math.round(jSessions * (bV - viewRetention) / 100 * cartPerView30 * purchPerCart30 * webAOV);
+      if (lost > 0) funnelGaps30.push({ label: '商品瀏覽', current: viewRetention.toFixed(1), target: bV, rev: lost });
+    }
+    if (cartRetention < bC) {
+      const lost = Math.round(jSessions * (bC - cartRetention) / 100 * purchPerCart30 * webAOV);
+      if (lost > 0) funnelGaps30.push({ label: '加入購物車', current: cartRetention.toFixed(1), target: bC, rev: lost });
+    }
+    if (purchRetention < bP) {
+      const lost = Math.round(jSessions * (bP - purchRetention) / 100 * webAOV);
+      if (lost > 0) funnelGaps30.push({ label: '完成購買', current: purchRetention.toFixed(1), target: bP, rev: lost });
+    }
+    funnelGaps30.sort((a, b) => b.rev - a.rev);
+  }
+  const priorityRows30 = funnelGaps30.map((g, i) => `
+    <tr style="${i > 0 ? 'border-top:1px solid #fee2e2' : ''}">
+      <td style="padding:6px 8px;font-size:12px;color:#444">${['🥇','🥈','🥉'][i] || ''} ${g.label}</td>
+      <td style="text-align:right;padding:6px 8px;font-size:12px;color:#888">${g.current}% → ${g.target}%</td>
+      <td style="text-align:right;padding:6px 8px;font-size:13px;font-weight:800;color:#dc2626">+$${g.rev.toLocaleString()}</td>
+    </tr>`).join('');
+  const priorityBlock30 = funnelGaps30.length > 0 ? `
+  <div style="background:#fff5f5;border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid #fecaca">
+    <div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:4px">🎯 最優先改善項目（依業績影響排序）</div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px">基準：商品瀏覽 20%・加購 8%・完成 2%｜官網客單 $${Math.round(webAOV).toLocaleString()}</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="color:#aaa;font-size:11px">
+        <th style="text-align:left;padding:4px 8px;font-weight:600">環節</th>
+        <th style="text-align:right;padding:4px 8px;font-weight:600">現值 → 基準</th>
+        <th style="text-align:right;padding:4px 8px;font-weight:600">達標可增業績</th>
+      </tr></thead>
+      <tbody>${priorityRows30}</tbody>
+    </table>
+  </div>` : '';
 
   // ── 近7天漏斗 ─────────────────────────────────────────────────────────────
   const recent7 = data.funnelTrend.slice(-7);
@@ -1578,6 +1632,46 @@ function renderGA4(data) {
   if (purch7Ret < 0.5) journey7Insights.push('完成購物留存率低於 0.5%，建議縮短結帳步驟並增加信任徽章');
   if (journey7Insights.length === 0)
     journey7Insights.push(`近7天轉換旅程正常，完成購物留存率 ${purch7Ret.toFixed(2)}%，持續觀察各環節變化`);
+
+  // ── 漏斗業績影響計算（7天）───────────────────────────────────────────────
+  const purchPerCart7 = j7Carts     > 0 ? j7Purchases / j7Carts     : 0;
+  const cartPerView7  = j7ViewItems > 0 ? j7Carts     / j7ViewItems : 0;
+  const funnelGaps7 = [];
+  if (webAOV > 0) {
+    const bV = 20, bC = 8, bP = 2;
+    if (view7Ret < bV) {
+      const lost = Math.round(j7Sessions * (bV - view7Ret) / 100 * cartPerView7 * purchPerCart7 * webAOV);
+      if (lost > 0) funnelGaps7.push({ label: '商品瀏覽', current: view7Ret.toFixed(1), target: bV, rev: lost });
+    }
+    if (cart7Ret < bC) {
+      const lost = Math.round(j7Sessions * (bC - cart7Ret) / 100 * purchPerCart7 * webAOV);
+      if (lost > 0) funnelGaps7.push({ label: '加入購物車', current: cart7Ret.toFixed(1), target: bC, rev: lost });
+    }
+    if (purch7Ret < bP) {
+      const lost = Math.round(j7Sessions * (bP - purch7Ret) / 100 * webAOV);
+      if (lost > 0) funnelGaps7.push({ label: '完成購買', current: purch7Ret.toFixed(1), target: bP, rev: lost });
+    }
+    funnelGaps7.sort((a, b) => b.rev - a.rev);
+  }
+  const priorityRows7 = funnelGaps7.map((g, i) => `
+    <tr style="${i > 0 ? 'border-top:1px solid #fde68a' : ''}">
+      <td style="padding:6px 8px;font-size:12px;color:#444">${['🥇','🥈','🥉'][i] || ''} ${g.label}</td>
+      <td style="text-align:right;padding:6px 8px;font-size:12px;color:#888">${g.current}% → ${g.target}%</td>
+      <td style="text-align:right;padding:6px 8px;font-size:13px;font-weight:800;color:#dc2626">+$${g.rev.toLocaleString()}</td>
+    </tr>`).join('');
+  const priorityBlock7 = funnelGaps7.length > 0 ? `
+  <div style="background:#fffdf0;border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid #fde68a">
+    <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px">🎯 本週最優先改善項目</div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px">基準：商品瀏覽 20%・加購 8%・完成 2%｜官網客單 $${Math.round(webAOV).toLocaleString()}</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="color:#aaa;font-size:11px">
+        <th style="text-align:left;padding:4px 8px;font-weight:600">環節</th>
+        <th style="text-align:right;padding:4px 8px;font-weight:600">現值 → 基準</th>
+        <th style="text-align:right;padding:4px 8px;font-weight:600">達標可增業績</th>
+      </tr></thead>
+      <tbody>${priorityRows7}</tbody>
+    </table>
+  </div>` : '';
 
   // 與近30天比對 delta（正=紅，負=綠，台灣財務慣例）
   const delta7 = (v7, v30) => {
@@ -1653,6 +1747,9 @@ function renderGA4(data) {
       </table>
     </div>
 
+    <!-- 本週最優先改善項目 -->
+    ${priorityBlock7}
+
     <!-- 數據分析 -->
     <div style="padding:12px 16px;background:#fff3cd;border-radius:10px;border:1px solid #ffc107">
       <div style="font-size:12px;font-weight:700;color:#856404;margin-bottom:8px">💡 近7天分析</div>
@@ -1714,6 +1811,9 @@ function renderGA4(data) {
         <div style="font-size:10px;color:#bbb;margin-top:4px">${jPurchases.toLocaleString()} / ${jSessions.toLocaleString()} 工作階段</div>
       </div>
     </div>
+
+    <!-- 最優先改善項目 -->
+    ${priorityBlock30}
 
     <!-- 優化建議 -->
     <div style="padding:12px 16px;background:#fff3cd;border-radius:10px;border:1px solid #ffc107">
