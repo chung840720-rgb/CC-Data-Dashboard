@@ -946,21 +946,37 @@ function parseCSV(csv) {
     const row = raw[i];
     const name = row[0].trim();
     if (name) {
-      summary[name] = {
-        revenue:     parseFloat(row[1])  || 0,
-        share:       parseFloat(row[2])  || 0,
-        mom:         (row[4] && row[4].trim() !== '-' && row[4].trim() !== '') ? parseFloat(row[4]) : null,
-        target:      parseFloat(row[6])  || 0,
-        achievement: parseFloat(row[7])  || 0,
-        traffic:     parseInt(row[8])    || 0,
-        orders:      parseInt(row[9])    || 0,
-        aov:         parseFloat(row[10]) || 0,
-        adSpend:     parseFloat(row[11]) || 0,
-        roas:        parseFloat(row[12]) || 0,
-        cpa:         parseFloat(row[13]) || 0,
-      };
+      if (name === '蝦皮直營') {
+        // 蝦皮直營只有業績，位於 AA 欄 (index 26)
+        summary[name] = {
+          revenue: parseFloat(row[26]) || 0,
+          share: 0,   // 後面依總業績動態算
+          mom: null, target: 0, achievement: 0,
+          traffic: 0, orders: 0, aov: 0,
+          adSpend: 0, roas: 0, cpa: 0,
+        };
+      } else {
+        summary[name] = {
+          revenue:     parseFloat(row[1])  || 0,
+          share:       parseFloat(row[2])  || 0,
+          mom:         (row[4] && row[4].trim() !== '-' && row[4].trim() !== '') ? parseFloat(row[4]) : null,
+          target:      parseFloat(row[6])  || 0,
+          achievement: parseFloat(row[7])  || 0,
+          traffic:     parseInt(row[8])    || 0,
+          orders:      parseInt(row[9])    || 0,
+          aov:         parseFloat(row[10]) || 0,
+          adSpend:     parseFloat(row[11]) || 0,
+          roas:        parseFloat(row[12]) || 0,
+          cpa:         parseFloat(row[13]) || 0,
+        };
+      }
     }
     i++;
+  }
+
+  // 蝦皮直營 share 動態計算（依總業績）
+  if (summary['蝦皮直營'] && summary['總'] && summary['總'].revenue > 0) {
+    summary['蝦皮直營'].share = summary['蝦皮直營'].revenue / summary['總'].revenue;
   }
 
   // Skip blank lines
@@ -1555,16 +1571,36 @@ function renderGA4(data) {
     </div>`;
   }).join('');
 
+  // 近7天數據分析
+  const journey7Insights = [];
+  if (view7Ret < 10)  journey7Insights.push('商品瀏覽留存率低於 10%，建議優化首頁推薦及商品分類導航，引導用戶點入商品頁');
+  if (cart7Ret < 3)   journey7Insights.push('加入購物車留存率低於 3%，建議強化商品頁 CTA、促銷標語與社會證明');
+  if (purch7Ret < 0.5) journey7Insights.push('完成購物留存率低於 0.5%，建議縮短結帳步驟並增加信任徽章');
+  if (journey7Insights.length === 0)
+    journey7Insights.push(`近7天轉換旅程正常，完成購物留存率 ${purch7Ret.toFixed(2)}%，持續觀察各環節變化`);
+
+  // 與近30天比對 delta（正=紅，負=綠，台灣財務慣例）
+  const delta7 = (v7, v30) => {
+    const d = v7 - v30;
+    const sign = d >= 0 ? '+' : '';
+    const col  = d >= 0 ? '#dc2626' : '#16a34a';
+    return `<span style="color:${col};font-weight:700">${sign}${d.toFixed(2)}pp</span>`;
+  };
+
   const journey7Block = `
   <div class="chart-card ga4-full" style="margin-bottom:16px;border:2px solid #fde68a;background:linear-gradient(135deg,#fffbeb 0%,#fff 100%)">
     <div style="margin-bottom:20px">
       <div class="chart-title" style="color:#d97706">🛒 官網購物旅程分析（近7天 ${range7Label}）</div>
       <div class="chart-sub">GA4 事件追蹤｜百分比均對比工作階段留存率</div>
     </div>
+
+    <!-- 直條漏斗圖 -->
     <div style="display:flex;align-items:flex-end;gap:8px;background:#fafaf8;border-radius:12px;padding:20px 24px 12px;margin-bottom:20px;min-height:220px">
       ${vertBar7HTML}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+
+    <!-- 3 指標卡片 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
       <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #fde68a">
         <div style="font-size:11px;color:#aaa;margin-bottom:6px">👁 商品瀏覽留存率</div>
         <div style="font-size:22px;font-weight:800;color:${view7Ret>=10?'#dc2626':'#16a34a'}">${view7Ret.toFixed(1)}%</div>
@@ -1580,6 +1616,47 @@ function renderGA4(data) {
         <div style="font-size:22px;font-weight:800;color:${purch7Ret>=0.5?'#dc2626':'#16a34a'}">${purch7Ret.toFixed(2)}%</div>
         <div style="font-size:10px;color:#bbb;margin-top:4px">${j7Purchases.toLocaleString()} / ${j7Sessions.toLocaleString()} 工作階段</div>
       </div>
+    </div>
+
+    <!-- 與近30天比對 -->
+    <div style="background:#fffdf0;border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid #fde68a">
+      <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:10px">📊 與近30天比對</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="color:#aaa;font-size:11px">
+            <th style="text-align:left;padding:4px 8px;font-weight:600">指標</th>
+            <th style="text-align:right;padding:4px 8px;font-weight:600">近7天</th>
+            <th style="text-align:right;padding:4px 8px;font-weight:600">近30天</th>
+            <th style="text-align:right;padding:4px 8px;font-weight:600">差異</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-top:1px solid #fde68a">
+            <td style="padding:6px 8px;color:#555">👁 商品瀏覽留存率</td>
+            <td style="text-align:right;padding:6px 8px;font-weight:700">${view7Ret.toFixed(2)}%</td>
+            <td style="text-align:right;padding:6px 8px;color:#888">${viewRetention.toFixed(2)}%</td>
+            <td style="text-align:right;padding:6px 8px">${delta7(view7Ret, viewRetention)}</td>
+          </tr>
+          <tr style="border-top:1px solid #fde68a">
+            <td style="padding:6px 8px;color:#555">🛒 加入購物車留存率</td>
+            <td style="text-align:right;padding:6px 8px;font-weight:700">${cart7Ret.toFixed(2)}%</td>
+            <td style="text-align:right;padding:6px 8px;color:#888">${cartRetention.toFixed(2)}%</td>
+            <td style="text-align:right;padding:6px 8px">${delta7(cart7Ret, cartRetention)}</td>
+          </tr>
+          <tr style="border-top:1px solid #fde68a">
+            <td style="padding:6px 8px;color:#555">✅ 完成購物留存率</td>
+            <td style="text-align:right;padding:6px 8px;font-weight:700">${purch7Ret.toFixed(2)}%</td>
+            <td style="text-align:right;padding:6px 8px;color:#888">${purchRetention.toFixed(2)}%</td>
+            <td style="text-align:right;padding:6px 8px">${delta7(purch7Ret, purchRetention)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 數據分析 -->
+    <div style="padding:12px 16px;background:#fff3cd;border-radius:10px;border:1px solid #ffc107">
+      <div style="font-size:12px;font-weight:700;color:#856404;margin-bottom:8px">💡 近7天分析</div>
+      ${journey7Insights.map((s,i) => `<div style="font-size:12px;color:#6b4c11;padding:4px 0;${i<journey7Insights.length-1?'border-bottom:1px solid #ffeeba':''}">${i+1}. ${s}</div>`).join('')}
     </div>
   </div>`;
 
