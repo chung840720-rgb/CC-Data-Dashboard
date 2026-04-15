@@ -671,7 +671,7 @@ function renderHomepage() {
     const trfPct  = wkM.nearTrf > 0 && wkM.prevTrf > 0 ? chgPct(wkM.nearTrf, wkM.prevTrf) : null;
     const crDelta = wkM.nearCR - wkM.prevCR;
     const aovPct  = wkM.nearAOV > 0 && wkM.prevAOV > 0 ? chgPct(wkM.nearAOV, wkM.prevAOV) : null;
-    const roasPct = wkM.nearROAS > 0 && wkM.prevROAS > 0 ? chgPct(wkM.nearROAS, wkM.prevROAS) : null;
+    const roasDelta = wkM.nearROAS > 0 && wkM.prevROAS > 0 ? wkM.nearROAS - wkM.prevROAS : null;
     const crReliable = wkM.prevCR > 0 && wkM.nearCR > 0 && (wkM.prevCR / wkM.nearCR >= 0.3);
 
     // ── 方向一：流量 × 轉換率 四象限診斷 ───────────────────────────────────
@@ -692,19 +692,14 @@ function renderHomepage() {
       else if (wkM.nearCR > 0) lines.push(`流量平穩，轉換率 ${wkM.nearCR.toFixed(2)}%`);
     }
 
-    // ── 方向二：轉換率每提升 1pp 的業績影響 ─────────────────────────────────
-    if (wkM.nearTrf > 0 && wkM.nearAOV > 0 && wkM.nearCR > 0) {
-      const crImpact = Math.round(wkM.nearTrf * 0.01 * wkM.nearAOV);
-      if (crImpact >= 300)
-        lines.push(`💰 轉換率每提升 1pp，以本週流量可多創造 <strong>$${crImpact.toLocaleString()}</strong> 業績`);
-    }
+    // ── 方向二（移除）：轉換率每提升 1pp 業績影響 → 對判斷無實質幫助，已拿掉 ──
 
     // ── 方向三：ROAS × 廣告費 預算建議 ──────────────────────────────────────
-    if (roasPct !== null && wkM.nearROAS > 0) {
-      if (wkM.nearROAS >= 5 && roasPct > 10)
-        lines.push(`🚀 ROAS ${wkM.nearROAS.toFixed(1)} 且週環比 +${roasPct.toFixed(1)}%，有條件加碼廣告預算擴大規模`);
-      else if (roasPct < -20)
-        lines.push(`ROAS 週環比 ${roasPct.toFixed(1)}%，廣告效率大幅下滑，建議暫停低效素材並重新測試受眾`);
+    if (roasDelta !== null && wkM.nearROAS > 0) {
+      if (wkM.nearROAS >= 5 && roasDelta > 0.5)
+        lines.push(`🚀 ROAS ${wkM.nearROAS.toFixed(1)}（週增 +${roasDelta.toFixed(1)}），有條件加碼廣告預算擴大規模`);
+      else if (roasDelta < -1)
+        lines.push(`ROAS 週降 ${roasDelta.toFixed(1)}（現為 ${wkM.nearROAS.toFixed(1)}），廣告效率大幅下滑，建議暫停低效素材並重新測試受眾`);
       else if (wkM.nearROAS < 2 && wkM.nearAds > 0)
         lines.push(`ROAS ${wkM.nearROAS.toFixed(1)} 偏低（廣告費 $${Math.round(wkM.nearAds).toLocaleString()}），效益不佳，建議縮減預算或優化素材`);
     }
@@ -793,8 +788,9 @@ function renderHomepage() {
         <div class="platform-metric-item">
           <div class="platform-metric-label">📈 ROAS</div>
           ${wkM.nearROAS > 0
-            ? `<div class="platform-metric-value" style="color:${valColor(wkM.nearROAS,wkM.prevROAS)}">${wkM.nearROAS.toFixed(1)}</div>
-               ${wkChip(wkM.nearROAS, wkM.prevROAS)}`
+            ? `<div class="platform-metric-value" style="color:${wkM.nearROAS >= wkM.prevROAS || wkM.prevROAS===0 ? '#dc2626':'#16a34a'}">${wkM.nearROAS.toFixed(1)}</div>
+               <span style="font-size:11px;color:${wkM.nearROAS >= wkM.prevROAS || wkM.prevROAS===0 ? '#dc2626':'#16a34a'}">
+                 ${wkM.prevROAS > 0 ? ((wkM.nearROAS >= wkM.prevROAS ? '▲' : '▼') + Math.abs(wkM.nearROAS - wkM.prevROAS).toFixed(1) + 'pp') : '—'}</span>`
             : `<div class="platform-metric-value" style="color:#bbb">—</div>`}
         </div>
       </div>
