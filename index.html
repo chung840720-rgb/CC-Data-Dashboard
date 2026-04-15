@@ -955,12 +955,11 @@ function parseCSV(csv) {
     const name = row[0].trim();
     if (name) {
       if (name === '蝦皮直營') {
-        // 蝦皮直營：summary 業績在 B 欄（row[1]，與其他平台相同）
-        // AA 欄（row[26]）是每日數據區段的位置，不適用於 summary
-        // 其餘欄位（流量/訂單/廣告費等）蝦皮直營無此數據，全部歸零避免位移
+        // 蝦皮直營：summary 列無累計業績，收入從每日 AA 欄加總（parseCSV 結尾處理）
+        // 先建立空物件佔位，revenue 後面用 daily 加總填入
         summary[name] = {
-          revenue: parseFloat(row[1]) || 0,
-          share: 0,   // 後面依總業績動態算
+          revenue: 0,
+          share: 0,
           mom: null, target: 0, achievement: 0,
           traffic: 0, orders: 0, aov: 0,
           adSpend: 0, roas: 0, cpa: 0,
@@ -1035,6 +1034,23 @@ function parseCSV(csv) {
     i++;
   }
 
+  // ── 蝦皮直營：從每日 AA 欄（row[26]）加總累計業績 ──────────────────────────
+  // summary 列無累計數字，需用 daily.direct 陣列加總
+  const directDailyTotal = daily.direct.reduce((s, v) => s + (v !== null ? v : 0), 0);
+  if (directDailyTotal > 0) {
+    if (!summary['蝦皮直營']) {
+      summary['蝦皮直營'] = {
+        revenue: 0, share: 0, mom: null, target: 0, achievement: 0,
+        traffic: 0, orders: 0, aov: 0, adSpend: 0, roas: 0, cpa: 0,
+      };
+    }
+    summary['蝦皮直營'].revenue = directDailyTotal;
+    // 重新計算占比
+    if (summary['總'] && summary['總'].revenue > 0) {
+      summary['蝦皮直營'].share = directDailyTotal / summary['總'].revenue;
+    }
+  }
+
   return { monthName, summary, daily };
 }
 
@@ -1085,14 +1101,14 @@ function renderDashboard(monthKey) {
 
   const directRow = direct ? `
     <tr>
-      <td style="padding:8px 10px"><span class="platform-tag tag-direct">蝦皮直營</span></td>
-      <td style="text-align:right;padding:8px 10px">${fmtFull(direct.revenue)}</td>
-      <td style="padding:8px 10px">—</td>
-      <td style="text-align:right;padding:8px 10px">${pct(direct.share)}</td>
-      <td style="text-align:right;padding:8px 10px">—</td>
-      <td style="text-align:right;padding:8px 10px">—</td>
-      <td style="text-align:right;padding:8px 10px">—</td>
-      <td style="text-align:right;padding:8px 10px">—</td>
+      <td><span class="platform-tag tag-direct">蝦皮直營</span></td>
+      <td>${fmtFull(direct.revenue)}</td>
+      <td>—</td>
+      <td>${pct(direct.share)}</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
     </tr>` : '';
 
   const hasDirectDaily = daily.direct.some(v => v !== null && v > 0);
