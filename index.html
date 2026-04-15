@@ -785,7 +785,7 @@ function renderHomepage() {
         <div class="platform-metric-item">
           <div class="platform-metric-label">📈 ROAS</div>
           ${wkM.nearROAS > 0
-            ? `<div class="platform-metric-value" style="color:${valColor(wkM.nearROAS,wkM.prevROAS)}">${wkM.nearROAS.toFixed(1)}x</div>
+            ? `<div class="platform-metric-value" style="color:${valColor(wkM.nearROAS,wkM.prevROAS)}">${wkM.nearROAS.toFixed(1)}</div>
                ${wkChip(wkM.nearROAS, wkM.prevROAS)}`
             : `<div class="platform-metric-value" style="color:#bbb">—</div>`}
         </div>
@@ -817,7 +817,7 @@ function renderHomepage() {
         </div>
       </td>
       <td style="text-align:right;padding:8px 10px">${pct(d.share||0)}</td>
-      <td style="text-align:right;padding:8px 10px">${(d.roas||0).toFixed(1)}x</td>
+      <td style="text-align:right;padding:8px 10px">${(d.roas||0).toFixed(1)}</td>
       <td style="text-align:right;padding:8px 10px">${fmtFull(d.adSpend||0)}</td>
       <td style="text-align:right;padding:8px 10px">${fmtFull(d.aov||0)}</td>
       <td style="text-align:right;padding:8px 10px">$${Math.round(d.cpa||0)}</td>
@@ -825,10 +825,14 @@ function renderHomepage() {
   }
 
   const directRow2 = direct ? `<tr>
-    <td><span class="platform-tag tag-direct">蝦皮直營</span></td>
-    <td>${fmtFull(direct.revenue||0)}</td>
-    <td>—</td><td>${pct(direct.share||0)}</td>
-    <td>—</td><td>—</td><td>—</td><td>—</td>
+    <td style="padding:8px 10px"><span class="platform-tag tag-direct">蝦皮直營</span></td>
+    <td style="text-align:right;padding:8px 10px">${fmtFull(direct.revenue||0)}</td>
+    <td style="padding:8px 10px">—</td>
+    <td style="text-align:right;padding:8px 10px">${pct(direct.share||0)}</td>
+    <td style="text-align:right;padding:8px 10px">—</td>
+    <td style="text-align:right;padding:8px 10px">—</td>
+    <td style="text-align:right;padding:8px 10px">—</td>
+    <td style="text-align:right;padding:8px 10px">—</td>
   </tr>` : '';
 
   const monthlyTableHTML = `
@@ -863,7 +867,7 @@ function renderHomepage() {
               </div>
             </td>
             <td style="text-align:right;padding:10px">100%</td>
-            <td style="text-align:right;padding:10px">${(total.roas||0).toFixed(1)}x</td>
+            <td style="text-align:right;padding:10px">${(total.roas||0).toFixed(1)}</td>
             <td style="text-align:right;padding:10px">${fmtFull(total.adSpend||0)}</td>
             <td style="text-align:right;padding:10px">${fmtFull(total.aov||0)}</td>
             <td style="text-align:right;padding:10px">$${Math.round(total.cpa||0)}</td>
@@ -983,7 +987,7 @@ function parseCSV(csv) {
         // MOMO: B=rev, C=traffic, D=轉換率%, E=訂單數, G=廣告費
         daily.momo.push(         parseFloat(row[1])  || 0);  // B (index 1)
         daily.momoTraffic.push(  parseInt(row[2])    || 0);  // C (index 2)
-        daily.momoCR.push(       parseFloat(row[3])  || 0);  // D (index 3) 轉換率
+        daily.momoCR.push((parseFloat(row[3]) || 0) * 100);  // D (index 3) 轉換率（小數→×100）
         daily.momoOrders.push(   parseInt(row[4])    || 0);  // E (index 4) 訂單數
         daily.momoAdSpend.push(  parseFloat(row[6])  || 0);  // G (index 6) 廣告費
         // 蝦皮: I=rev, J=traffic, K=轉換率%, L=訂單數, P=廣告費
@@ -1055,11 +1059,14 @@ function renderDashboard(monthKey) {
 
   const directRow = direct ? `
     <tr>
-      <td><span class="platform-tag tag-direct">蝦皮直營</span></td>
-      <td>${fmtFull(direct.revenue)}</td>
-      <td>—</td>
-      <td>${pct(direct.share)}</td>
-      <td>—</td><td>—</td><td>—</td><td>—</td>
+      <td style="padding:8px 10px"><span class="platform-tag tag-direct">蝦皮直營</span></td>
+      <td style="text-align:right;padding:8px 10px">${fmtFull(direct.revenue)}</td>
+      <td style="padding:8px 10px">—</td>
+      <td style="text-align:right;padding:8px 10px">${pct(direct.share)}</td>
+      <td style="text-align:right;padding:8px 10px">—</td>
+      <td style="text-align:right;padding:8px 10px">—</td>
+      <td style="text-align:right;padding:8px 10px">—</td>
+      <td style="text-align:right;padding:8px 10px">—</td>
     </tr>` : '';
 
   const hasDirectDaily = daily.direct.some(v => v !== null && v > 0);
@@ -1081,7 +1088,7 @@ function renderDashboard(monthKey) {
       <div class="kpi-card">
         <div class="kpi-label">💰 廣告花費</div>
         <div class="kpi-value">${fmt(total.adSpend)}</div>
-        <div class="kpi-sub">整體 ROAS <strong>${(total.roas||0).toFixed(1)}x</strong></div>
+        <div class="kpi-sub">整體 ROAS <strong>${(total.roas||0).toFixed(1)}</strong></div>
         <div class="kpi-sub">CPA $${Math.round(total.cpa)}</div>
       </div>
       <div class="kpi-card">
@@ -1113,7 +1120,7 @@ function renderDashboard(monthKey) {
             <td>${fmtFull(momo.revenue)}</td>
             <td><div class="progress-wrap"><div class="progress-bg"><div class="progress-bar" style="width:${Math.min(momo.achievement*100,100)}%;background:#dc2626"></div></div><span>${pct(momo.achievement)}</span></div></td>
             <td>${pct(momo.share)}</td>
-            <td>${(momo.roas||0).toFixed(2)}</td>
+            <td>${(momo.roas||0).toFixed(1)}</td>
             <td>${fmtFull(momo.adSpend)}</td>
             <td>${fmtFull(momo.aov)}</td>
             <td>$${Math.round(momo.cpa)}</td>
@@ -1123,7 +1130,7 @@ function renderDashboard(monthKey) {
             <td>${fmtFull(shopee.revenue)}</td>
             <td><div class="progress-wrap"><div class="progress-bg"><div class="progress-bar" style="width:${Math.min(shopee.achievement*100,100)}%;background:#ea580c"></div></div><span>${pct(shopee.achievement)}</span></div></td>
             <td>${pct(shopee.share)}</td>
-            <td>${(shopee.roas||0).toFixed(2)}</td>
+            <td>${(shopee.roas||0).toFixed(1)}</td>
             <td>${fmtFull(shopee.adSpend)}</td>
             <td>${fmtFull(shopee.aov)}</td>
             <td>$${Math.round(shopee.cpa)}</td>
@@ -1133,7 +1140,7 @@ function renderDashboard(monthKey) {
             <td>${fmtFull(web.revenue)}</td>
             <td><div class="progress-wrap"><div class="progress-bg"><div class="progress-bar" style="width:${Math.min(web.achievement*100,100)}%;background:#2563eb"></div></div><span>${pct(web.achievement)}</span></div></td>
             <td>${pct(web.share)}</td>
-            <td>${(web.roas||0).toFixed(2)}</td>
+            <td>${(web.roas||0).toFixed(1)}</td>
             <td>${fmtFull(web.adSpend)}</td>
             <td>${fmtFull(web.aov)}</td>
             <td>$${Math.round(web.cpa)}</td>
@@ -1144,7 +1151,7 @@ function renderDashboard(monthKey) {
             <td><strong>${fmtFull(total.revenue)}</strong></td>
             <td><div class="progress-wrap"><div class="progress-bg"><div class="progress-bar" style="width:${Math.min(total.achievement*100,100)}%;background:#1a1a1a"></div></div><span><strong>${pct(total.achievement)}</strong></span></div></td>
             <td>100%</td>
-            <td><strong>${(total.roas||0).toFixed(2)}</strong></td>
+            <td><strong>${(total.roas||0).toFixed(1)}</strong></td>
             <td><strong>${fmtFull(total.adSpend)}</strong></td>
             <td><strong>${fmtFull(total.aov)}</strong></td>
             <td><strong>$${Math.round(total.cpa)}</strong></td>
@@ -1218,7 +1225,7 @@ function renderDashboard(monthKey) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ROAS ${(ctx.raw||0).toFixed(2)}x` } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ROAS ${(ctx.raw||0).toFixed(1)}` } } },
       scales: {
         x: { grid: { display: false } },
         y: { ticks: { callback: v => v + 'x' }, grid: { color: '#f0f0ec' } }
@@ -1337,7 +1344,7 @@ function renderYearlyOverview() {
     <div class="yearly-kpi-card">
       <div class="yearly-kpi-label">💰 YTD 廣告花費</div>
       <div class="yearly-kpi-value">${'$' + Math.round(ytdAds).toLocaleString()}</div>
-      <div class="yearly-kpi-sub">整體 ROAS ${ytdROAS.toFixed(2)}x</div>
+      <div class="yearly-kpi-sub">整體 ROAS ${ytdROAS.toFixed(1)}</div>
     </div>
     <div class="yearly-kpi-card">
       <div class="yearly-kpi-label">🎯 平均達成率</div>
@@ -1429,7 +1436,7 @@ function renderYearlyOverview() {
         </div>
       </td>
       <td>$${mAds[i].toLocaleString()}</td>
-      <td>${mRoas[i].toFixed(2)}x</td>
+      <td>${mRoas[i].toFixed(1)}</td>
       <td>${mTraffic[i].toLocaleString()}</td>
       <td>$${Math.round(mAov[i]).toLocaleString()}</td>
     </tr>`;
@@ -1448,7 +1455,7 @@ function renderYearlyOverview() {
       </div>
     </td>
     <td>$${totalAds2.toLocaleString()}</td>
-    <td>${ytdRoasFull.toFixed(2)}x</td>
+    <td>${ytdRoasFull.toFixed(1)}</td>
     <td>${totalTrf.toLocaleString()}</td>
     <td>—</td>
   </tr>`;
@@ -1481,69 +1488,108 @@ function renderGA4(data) {
 
   // ── 購物旅程綜合評估 ──────────────────────────────────────────────────────
   // 從 funnelTrend 加總近30天
+  // 漏斗指標：工作階段 → 商品瀏覽(view_item) → 加入購物車(add_to_cart) → 完成購買(purchase)
   const fSum = k => data.funnelTrend.reduce((s,r) => s + parseInt(r[k]||0), 0);
-  const jSessions  = totalSessions;
-  const jCarts     = fSum('addToCarts');
-  const jCheckouts = fSum('checkouts');
-  const jPurchases = fSum('transactions');
-  // 試算表官網數據 (最新月份)
-  const latestKey   = [...MONTH_KEYS].reverse().find(k => allData[k]);
-  const webSheet    = latestKey ? (allData[latestKey].summary['官網'] || {}) : {};
-  const sheetOrders = webSheet.orders  || 0;
-  const sheetRevWeb = webSheet.revenue || 0;
+  const jSessions   = totalSessions;
+  const jViewItems  = fSum('itemViews');    // view_item 事件（需 Apps Script 提供）
+  const jCarts      = fSum('addToCarts');
+  const jPurchases  = fSum('transactions');
 
-  // 旅程步驟（Sessions → 購物車 → 結帳 → 購買），留存率均對比工作階段
-  const journeySteps = [
-    { label: '工作階段',   val: jSessions,  color: '#3b82f6', sub: '訪客進入網站' },
-    { label: '加入購物車', val: jCarts,     color: '#f97316', sub: `對比工作階段 ${jSessions > 0 ? (jCarts/jSessions*100).toFixed(1) : 0}%` },
-    { label: '到達結帳',   val: jCheckouts, color: '#8b5cf6', sub: `對比工作階段 ${jSessions > 0 ? (jCheckouts/jSessions*100).toFixed(1) : 0}%` },
-    { label: '完成購買',   val: jPurchases, color: '#22c55e', sub: `對比工作階段 ${jSessions > 0 ? (jPurchases/jSessions*100).toFixed(1) : 0}%` },
-  ];
-  const maxStep = jSessions;
+  // 留存率（均對比工作階段）
+  const viewRetention  = jSessions > 0 ? jViewItems  / jSessions * 100 : 0;
+  const cartRetention  = jSessions > 0 ? jCarts      / jSessions * 100 : 0;
+  const purchRetention = jSessions > 0 ? jPurchases  / jSessions * 100 : 0;
 
-  // 找最大落差步驟（哪個環節流失最多）
-  let biggestDropIdx = 1;
-  let biggestDropPct = 0;
-  for (let i = 1; i < journeySteps.length; i++) {
-    const prev = journeySteps[i-1].val;
-    const curr = journeySteps[i].val;
-    const drop = prev > 0 ? (1 - curr/prev) * 100 : 0;
-    if (drop > biggestDropPct) { biggestDropPct = drop; biggestDropIdx = i; }
-  }
-  const dropLabel = journeySteps[biggestDropIdx].label;
-  const prevLabel = journeySteps[biggestDropIdx - 1].label;
-
-  // GA4 vs 試算表對照
-  const ga4PurchaseVsSheet = sheetOrders > 0 && jPurchases > 0
-    ? `GA4 記錄 ${jPurchases.toLocaleString()} 筆購買，試算表官網 ${sheetOrders.toLocaleString()} 筆訂單`
-    : `GA4 購買數 ${jPurchases.toLocaleString()} 筆`;
-
-  // anomalyNote 已移除（使用者自行了解 GA4 資料特性）
-  const anomalyNote = '';
-
-  // 留存率（對比工作階段）
-  const cartRetention   = jSessions > 0 ? jCarts     / jSessions * 100 : 0;
-  const checkRetention  = jSessions > 0 ? jCheckouts / jSessions * 100 : 0;
-  const purchRetention  = jSessions > 0 ? jPurchases / jSessions * 100 : 0;
-
-  // 旅程建議（以工作階段留存率為基準）
+  // 旅程建議
   const journeyInsights = [];
+  if (viewRetention < 10)
+    journeyInsights.push('商品瀏覽留存率低於 10%，建議優化首頁推薦、分類導航與搜尋功能，引導用戶深入瀏覽商品');
   if (cartRetention < 3)
-    journeyInsights.push('加入購物車留存率低於 3%，建議加強商品頁 CTA、促銷資訊及頁面瀏覽深度');
-  if (checkRetention < 1)
-    journeyInsights.push('到達結帳留存率低於 1%，購物車流失嚴重，建議優化購物車頁面及結帳入口');
+    journeyInsights.push('加入購物車留存率低於 3%，建議加強商品頁 CTA、促銷資訊及社會證明（評價、銷量）');
   if (purchRetention < 0.5)
     journeyInsights.push('完成購物留存率低於 0.5%，建議縮短結帳步驟、增加支付方式並強化信任徽章');
   if (journeyInsights.length === 0)
-    journeyInsights.push(`整體轉換旅程正常，完成購物留存率 ${purchRetention.toFixed(2)}%，持續優化各環節可帶來最大改善`);
+    journeyInsights.push(`整體轉換旅程表現良好，完成購物留存率 ${purchRetention.toFixed(2)}%，持續優化各環節可帶來最大改善`);
 
-  // 直條圖（CSS-based，對比工作階段留存率）
+  // ── 近7天漏斗 ─────────────────────────────────────────────────────────────
+  const recent7 = data.funnelTrend.slice(-7);
+  const f7Sum = k => recent7.reduce((s,r) => s + parseInt(r[k]||0), 0);
+  const j7ViewItems = f7Sum('itemViews');   // view_item
+  const j7Carts     = f7Sum('addToCarts');
+  const j7Purchases = f7Sum('transactions');
+  // 嘗試從 funnelTrend 取得每日 sessions，否則按比例推算
+  const j7SessionsRaw = recent7.reduce((s,r) => s + parseInt(r.sessions||0), 0);
+  const j7Sessions = j7SessionsRaw > 0
+    ? j7SessionsRaw
+    : (data.funnelTrend.length > 0 ? Math.round(totalSessions * recent7.length / data.funnelTrend.length) : 0);
+  const view7Ret  = j7Sessions > 0 ? j7ViewItems / j7Sessions * 100 : 0;
+  const cart7Ret  = j7Sessions > 0 ? j7Carts     / j7Sessions * 100 : 0;
+  const purch7Ret = j7Sessions > 0 ? j7Purchases / j7Sessions * 100 : 0;
+
+  // 動態日期範圍 label（昨天往前7天）
+  const todayD = new Date();
+  const endD   = new Date(todayD); endD.setDate(todayD.getDate() - 1);
+  const startD = new Date(endD);   startD.setDate(endD.getDate() - 6);
+  const fmtD   = d => `${d.getMonth()+1}/${d.getDate()}`;
+  const range7Label = `${fmtD(startD)}-${fmtD(endD)}`;
+
+  const funnel7Cols = [
+    { label: '工作階段',   val: j7Sessions,  pct: 100,       color: '#3b82f6' },
+    { label: '商品瀏覽',   val: j7ViewItems, pct: view7Ret,  color: '#06b6d4' },
+    { label: '加入購物車', val: j7Carts,     pct: cart7Ret,  color: '#f97316' },
+    { label: '完成購買',   val: j7Purchases, pct: purch7Ret, color: '#22c55e' },
+  ];
+  const maxBarH7 = 140;
+  const vertBar7HTML = funnel7Cols.map((s, i) => {
+    const barH = Math.max(s.pct / 100 * maxBarH7, 6);
+    const pctLabel = i === 0 ? '100%' : s.pct.toFixed(1) + '%';
+    const arrow = i > 0 ? `<div style="position:absolute;left:-14px;bottom:${barH/2}px;font-size:14px;color:#ddd">→</div>` : '';
+    return `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative">
+      ${arrow}
+      <div style="font-size:13px;font-weight:700;color:#888;margin-bottom:2px">${pctLabel}</div>
+      <div style="font-size:14px;font-weight:800;color:${s.color};margin-bottom:6px">${s.val.toLocaleString()}</div>
+      <div style="width:72%;min-width:44px;height:${barH}px;background:${s.color};border-radius:8px 8px 0 0;opacity:0.92"></div>
+      <div style="width:100%;height:2px;background:${s.color}30;margin-bottom:10px"></div>
+      <div style="font-size:11px;color:#555;font-weight:600;text-align:center;line-height:1.4">${s.label}</div>
+    </div>`;
+  }).join('');
+
+  const journey7Block = `
+  <div class="chart-card ga4-full" style="margin-bottom:16px;border:2px solid #fde68a;background:linear-gradient(135deg,#fffbeb 0%,#fff 100%)">
+    <div style="margin-bottom:20px">
+      <div class="chart-title" style="color:#d97706">🛒 官網購物旅程分析（近7天 ${range7Label}）</div>
+      <div class="chart-sub">GA4 事件追蹤｜百分比均對比工作階段留存率</div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:8px;background:#fafaf8;border-radius:12px;padding:20px 24px 12px;margin-bottom:20px;min-height:220px">
+      ${vertBar7HTML}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #fde68a">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px">👁 商品瀏覽留存率</div>
+        <div style="font-size:22px;font-weight:800;color:${view7Ret>=10?'#dc2626':'#16a34a'}">${view7Ret.toFixed(1)}%</div>
+        <div style="font-size:10px;color:#bbb;margin-top:4px">${j7ViewItems.toLocaleString()} / ${j7Sessions.toLocaleString()} 工作階段</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #fde68a">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px">🛒 加入購物車留存率</div>
+        <div style="font-size:22px;font-weight:800;color:${cart7Ret>=3?'#dc2626':'#16a34a'}">${cart7Ret.toFixed(1)}%</div>
+        <div style="font-size:10px;color:#bbb;margin-top:4px">${j7Carts.toLocaleString()} / ${j7Sessions.toLocaleString()} 工作階段</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #fde68a">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px">✅ 完成購物留存率</div>
+        <div style="font-size:22px;font-weight:800;color:${purch7Ret>=0.5?'#dc2626':'#16a34a'}">${purch7Ret.toFixed(2)}%</div>
+        <div style="font-size:10px;color:#bbb;margin-top:4px">${j7Purchases.toLocaleString()} / ${j7Sessions.toLocaleString()} 工作階段</div>
+      </div>
+    </div>
+  </div>`;
+
+  // 直條圖（CSS-based，對比工作階段留存率，近30天）
   const maxBarH = 140;
   const funnelCols = [
-    { label: '工作階段',   val: jSessions,  pct: 100,            color: '#3b82f6' },
-    { label: '加入購物車', val: jCarts,     pct: cartRetention,  color: '#f97316' },
-    { label: '到達結帳',   val: jCheckouts, pct: checkRetention, color: '#8b5cf6' },
-    { label: '完成購買',   val: jPurchases, pct: purchRetention, color: '#22c55e' },
+    { label: '工作階段',   val: jSessions,  pct: 100,           color: '#3b82f6' },
+    { label: '商品瀏覽',   val: jViewItems, pct: viewRetention, color: '#06b6d4' },
+    { label: '加入購物車', val: jCarts,     pct: cartRetention, color: '#f97316' },
+    { label: '完成購買',   val: jPurchases, pct: purchRetention,color: '#22c55e' },
   ];
 
   const vertBarHTML = funnelCols.map((s, i) => {
@@ -1576,14 +1622,14 @@ function renderGA4(data) {
     <!-- 留存率 3 指標 -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
       <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e7ff">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px">👁 商品瀏覽留存率</div>
+        <div style="font-size:22px;font-weight:800;color:${viewRetention>=10?'#dc2626':'#16a34a'}">${viewRetention.toFixed(1)}%</div>
+        <div style="font-size:10px;color:#bbb;margin-top:4px">${jViewItems.toLocaleString()} / ${jSessions.toLocaleString()} 工作階段</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e7ff">
         <div style="font-size:11px;color:#aaa;margin-bottom:6px">🛒 加入購物車留存率</div>
         <div style="font-size:22px;font-weight:800;color:${cartRetention>=3?'#dc2626':'#16a34a'}">${cartRetention.toFixed(1)}%</div>
         <div style="font-size:10px;color:#bbb;margin-top:4px">${jCarts.toLocaleString()} / ${jSessions.toLocaleString()} 工作階段</div>
-      </div>
-      <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e7ff">
-        <div style="font-size:11px;color:#aaa;margin-bottom:6px">💳 到達結帳留存率</div>
-        <div style="font-size:22px;font-weight:800;color:${checkRetention>=1?'#dc2626':'#16a34a'}">${checkRetention.toFixed(1)}%</div>
-        <div style="font-size:10px;color:#bbb;margin-top:4px">${jCheckouts.toLocaleString()} / ${jSessions.toLocaleString()} 工作階段</div>
       </div>
       <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e7ff">
         <div style="font-size:11px;color:#aaa;margin-bottom:6px">✅ 完成購物留存率</div>
@@ -1599,7 +1645,7 @@ function renderGA4(data) {
     </div>
   </div>`;
 
-  document.getElementById('ga4Dashboard').innerHTML = journeyBlock + `
+  document.getElementById('ga4Dashboard').innerHTML = journey7Block + journeyBlock + `
     <!-- KPI Cards -->
     <div class="ga4-kpi-grid">
       <div class="kpi-card">
@@ -1717,8 +1763,8 @@ function renderGA4(data) {
     data: {
       labels: fDates,
       datasets: [
+        { label: '商品瀏覽',   data: data.funnelTrend.slice(-30).map(r => parseInt(r.itemViews||0)), borderColor: '#06b6d4', backgroundColor: '#06b6d420', tension: 0.4, fill: true, pointRadius: 3 },
         { label: '加入購物車', data: data.funnelTrend.slice(-30).map(r => parseInt(r.addToCarts)),  borderColor: '#f97316', backgroundColor: '#f9731620', tension: 0.4, fill: true, pointRadius: 3 },
-        { label: '進入結帳',   data: data.funnelTrend.slice(-30).map(r => parseInt(r.checkouts)),   borderColor: '#8b5cf6', backgroundColor: '#8b5cf620', tension: 0.4, fill: true, pointRadius: 3 },
         { label: '完成購買',   data: data.funnelTrend.slice(-30).map(r => parseInt(r.transactions)),borderColor: '#22c55e', backgroundColor: '#22c55e20', tension: 0.4, fill: true, pointRadius: 3 },
       ]
     },
@@ -1758,13 +1804,13 @@ function renderGA4(data) {
 function buildFunnel(trend) {
   const sum = k => trend.reduce((s,r) => s + parseInt(r[k]||0), 0);
   const sessions  = sum('sessions');
+  const itemViews = sum('itemViews');
   const carts     = sum('addToCarts');
-  const checkouts = sum('checkouts');
   const purchases = sum('transactions');
   const steps = [
     { label: '工作階段',   val: sessions,  color: '#3b82f6' },
+    { label: '商品瀏覽',   val: itemViews, color: '#06b6d4' },
     { label: '加入購物車', val: carts,     color: '#f97316' },
-    { label: '到達結帳',   val: checkouts, color: '#8b5cf6' },
     { label: '完成購買',   val: purchases, color: '#22c55e' },
   ];
   return '<div class="funnel-bars">' + steps.map((s,i) => {
