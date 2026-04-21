@@ -347,6 +347,47 @@
     .insights-row { grid-template-columns: 1fr; }
     .home-nav-grid { grid-template-columns: repeat(2, 1fr); }
   }
+
+  /* ── Shopline Toolbar & Channel Tabs ───────────────── */
+  .sl-toolbar {
+    background: #fff; border-bottom: 1px solid #e8e8e4;
+    padding: 12px 40px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .sl-period-group { display: flex; gap: 4px; flex-wrap: wrap; }
+  .sl-period-btn {
+    padding: 5px 13px; border-radius: 20px; border: 1.5px solid #e8e8e4;
+    background: #fff; font-size: 12px; font-weight: 600; color: #888;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .sl-period-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .sl-period-btn:hover:not(.active) { border-color: #999; color: #444; }
+  .sl-date-input {
+    padding: 5px 10px; border-radius: 8px; border: 1.5px solid #e8e8e4;
+    font-size: 12px; color: #444; outline: none; width: 130px;
+  }
+  .sl-compare-select {
+    padding: 5px 10px; border-radius: 8px; border: 1.5px solid #e8e8e4;
+    font-size: 12px; color: #444; background: #fff; outline: none; cursor: pointer;
+  }
+  .sl-channel-tabs {
+    background: #fff; border-bottom: 2px solid #f0f0ec;
+    padding: 0 40px; display: flex; gap: 0;
+  }
+  .sl-channel-btn {
+    padding: 11px 22px; border: none; background: transparent;
+    font-size: 13px; font-weight: 600; color: #999; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all 0.2s; margin-bottom: -2px;
+  }
+  .sl-channel-btn.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+  .sl-channel-btn:hover:not(.active) { color: #444; }
+  .sl-week-nav { display: flex; align-items: center; gap: 8px; }
+  .sl-week-btn {
+    padding: 4px 12px; border-radius: 20px; border: 1.5px solid #e8e8e4;
+    background: #fff; font-size: 13px; cursor: pointer; transition: all 0.2s; color: #666;
+  }
+  .sl-week-btn:hover { border-color: #1a1a1a; color: #1a1a1a; }
+  .sl-week-btn:disabled { opacity: 0.35; cursor: default; }
+  .sl-week-label { font-size: 12px; font-weight: 600; color: #666; min-width: 110px; text-align: center; }
 </style>
 </head>
 <body>
@@ -359,7 +400,7 @@
       <div class="header-meta" id="headerMeta">資料來源：Google Sheets（Apps Script）</div>
     </div>
   </div>
-  <div class="last-updated" id="lastUpdated">🕐 更新：2026-04-10 15:54</div>
+  <div class="last-updated" id="lastUpdated">🕐 更新：2026-04-20 11:24</div>
 </div>
 
 <div class="month-tabs">
@@ -368,6 +409,7 @@
   <button class="tab-btn" data-month="2月業績">2月</button>
   <button class="tab-btn" data-month="3月業績">3月</button>
   <button class="tab-btn" data-month="4月業績">4月</button>
+  <button class="tab-btn tab-shopline" data-view="shopline">🛒 Shopline 訂單</button>
   <button class="tab-btn tab-ga4" data-view="ga4">📊 流量分析</button>
 </div>
 
@@ -430,6 +472,42 @@
   </div>
 </div>
 
+<!-- ══════════════════ Shopline 訂單 ══════════════════ -->
+<div id="shoplineSection" style="display:none">
+  <!-- 日期區間工具列 -->
+  <div class="sl-toolbar" id="slToolbar" style="display:none">
+    <span style="font-size:12px;font-weight:700;color:#555">📅 區間</span>
+    <div class="sl-period-group">
+      <button class="sl-period-btn" onclick="slSetPeriod('all')">開站至今</button>
+      <button class="sl-period-btn" onclick="slSetPeriod('yesterday')">昨天</button>
+      <button class="sl-period-btn active" onclick="slSetPeriod('thisMonth')">這個月</button>
+      <button class="sl-period-btn" onclick="slSetPeriod('lastMonth')">上個月</button>
+      <button class="sl-period-btn" onclick="slSetPeriod('7d')">近7天</button>
+      <button class="sl-period-btn" onclick="slSetPeriod('30d')">近30天</button>
+    </div>
+    <input type="date" id="slDateStart" class="sl-date-input" style="margin-left:4px">
+    <span style="font-size:12px;color:#bbb">~</span>
+    <input type="date" id="slDateEnd" class="sl-date-input">
+    <button class="sl-period-btn" onclick="slSetPeriod('custom')" style="background:#f5f5f0;border-color:#ddd">套用</button>
+    <span style="font-size:12px;font-weight:700;color:#555;margin-left:14px">比較</span>
+    <select id="slCompareSelect" class="sl-compare-select" onchange="slOnCompareChange()">
+      <option value="">不比較</option>
+      <option value="prevPeriod">前一個相同區間</option>
+      <option value="lastMonth">上個月同期</option>
+    </select>
+  </div>
+  <!-- 頻道分頁 -->
+  <div class="sl-channel-tabs" id="slChannelTabs" style="display:none">
+    <button class="sl-channel-btn active" onclick="slSetChannel('all')">🛒 全部訂單</button>
+    <button class="sl-channel-btn" onclick="slSetChannel('online')">🖥️ 網店</button>
+    <button class="sl-channel-btn" onclick="slSetChannel('pos')">🏪 POS</button>
+  </div>
+  <div class="container">
+    <button class="btn-home-back" onclick="showView('home')">← 返回首頁</button>
+    <div id="shoplineDashboard"><div class="loading">⏳ 載入 Shopline 資料中...</div></div>
+  </div>
+</div>
+
 <!-- ══════════════════ GA4 流量分析 ══════════════════ -->
 <div id="ga4Section" style="display:none">
   <div class="container">
@@ -464,13 +542,32 @@ let activeMonth = '4月業績';
 let chartInstances = {};
 let currentView = 'home';
 let ga4Loaded = false;
+let shoplineLoaded = false;
+
+// ── Shopline 全域狀態 ─────────────────────────────────────────────────────────
+const SL_OPEN_DATE = '2025-03-03';
+// 預設這個月（快速載入；若需開站至今請點工具列按鈕）
+const _slToday = new Date();
+const _slMonthStart = new Date(_slToday.getFullYear(), _slToday.getMonth(), 1)
+  .toISOString().split('T')[0];
+let slState = {
+  period: 'thisMonth',
+  startDate: _slMonthStart,
+  endDate: _slToday.toISOString().split('T')[0],
+  channel: 'all',
+  weekOffset: 0,
+  compare: '',
+  rawData: null,
+};
+let slChartInstances = {};
 
 function showView(view) {
   currentView = view;
-  document.getElementById('homeView').style.display    = view === 'home'  ? 'block' : 'none';
-  document.getElementById('monthView').style.display   = view === 'month' ? 'block' : 'none';
-  document.getElementById('ga4Section').style.display  = view === 'ga4'   ? 'block' : 'none';
-  document.getElementById('metaSection').style.display = view === 'meta'  ? 'block' : 'none';
+  document.getElementById('homeView').style.display        = view === 'home'      ? 'block' : 'none';
+  document.getElementById('monthView').style.display       = view === 'month'     ? 'block' : 'none';
+  document.getElementById('ga4Section').style.display      = view === 'ga4'       ? 'block' : 'none';
+  document.getElementById('metaSection').style.display     = view === 'meta'      ? 'block' : 'none';
+  document.getElementById('shoplineSection').style.display = view === 'shopline'  ? 'block' : 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -478,6 +575,8 @@ function showView(view) {
     document.querySelector('[data-view="home"]')?.classList.add('active');
   } else if (view === 'ga4') {
     document.querySelector('[data-view="ga4"]')?.classList.add('active');
+  } else if (view === 'shopline') {
+    document.querySelector('[data-view="shopline"]')?.classList.add('active');
   } else if (view === 'month') {
     document.querySelector(`[data-month="${activeMonth}"]`)?.classList.add('active');
   }
@@ -2062,6 +2161,27 @@ async function init() {
           return;
         }
 
+        if (btn.dataset.view === 'shopline') {
+          showView('shopline');
+          if (!shoplineLoaded) {
+            shoplineLoaded = true;
+            try {
+              const data = await fetchShopline(slState.startDate, slState.endDate);
+              slState.rawData = data;
+              // 初始化日期輸入欄
+              document.getElementById('slDateStart').value = slState.startDate;
+              document.getElementById('slDateEnd').value   = slState.endDate;
+              document.getElementById('slToolbar').style.display = '';
+              document.getElementById('slChannelTabs').style.display = '';
+              renderShopline(data);
+            } catch(err) {
+              document.getElementById('shoplineDashboard').innerHTML =
+                `<div class="error">⚠️ Shopline 資料載入失敗：${err.message}</div>`;
+            }
+          }
+          return;
+        }
+
         if (btn.dataset.view === 'ga4') {
           showView('ga4');
           if (!ga4Loaded) {
@@ -2094,6 +2214,532 @@ async function init() {
     document.getElementById('homeContent').innerHTML =
       `<div class="error">⚠️ 資料載入失敗：${err.message}<br>請確認 Google Sheets Apps Script 已正確部署。</div>`;
   }
+}
+
+// ── Shopline Fetch & Period Helpers ───────────────────────────────────────────
+async function fetchShopline(startDate, endDate) {
+  const p = new URLSearchParams({
+    sheet: 'shopline',
+    start_date: startDate || SL_OPEN_DATE,
+    end_date:   endDate   || new Date().toISOString().split('T')[0],
+  });
+  const r = await fetch(SCRIPT_URL + '?' + p.toString());
+  const json = await r.json();
+  if (json.status !== 'ok') throw new Error(json.message || '資料異常');
+  return json;
+}
+
+function slDateRange(period) {
+  const today = new Date();
+  const fmt   = d => d.toISOString().split('T')[0];
+  const shift = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+  switch (period) {
+    case 'all':       return { start: SL_OPEN_DATE, end: fmt(today) };
+    case 'yesterday': return { start: fmt(shift(today,-1)), end: fmt(shift(today,-1)) };
+    case 'thisMonth': return { start: fmt(new Date(today.getFullYear(), today.getMonth(), 1)), end: fmt(today) };
+    case 'lastMonth': return {
+      start: fmt(new Date(today.getFullYear(), today.getMonth()-1, 1)),
+      end:   fmt(new Date(today.getFullYear(), today.getMonth(), 0))
+    };
+    case '7d':  return { start: fmt(shift(today,-6)), end: fmt(today) };
+    case '30d': return { start: fmt(shift(today,-29)), end: fmt(today) };
+    default:    return { start: SL_OPEN_DATE, end: fmt(today) };
+  }
+}
+
+async function slSetPeriod(period) {
+  document.querySelectorAll('.sl-period-btn').forEach(b => b.classList.remove('active'));
+  const pressed = document.querySelector(`.sl-period-btn[onclick="slSetPeriod('${period}')"]`);
+  if (pressed) pressed.classList.add('active');
+
+  let start, end;
+  if (period === 'custom') {
+    start = document.getElementById('slDateStart').value;
+    end   = document.getElementById('slDateEnd').value;
+    if (!start || !end) return;
+  } else {
+    const range = slDateRange(period);
+    start = range.start; end = range.end;
+    document.getElementById('slDateStart').value = start;
+    document.getElementById('slDateEnd').value   = end;
+  }
+  slState.period = period; slState.startDate = start; slState.endDate = end;
+  slState.weekOffset = 0;
+
+  document.getElementById('shoplineDashboard').innerHTML = '<div class="loading">⏳ 重新載入資料中...</div>';
+  try {
+    const data = await fetchShopline(start, end);
+    slState.rawData = data;
+    renderShopline(data);
+  } catch(err) {
+    document.getElementById('shoplineDashboard').innerHTML = `<div class="error">⚠️ ${err.message}</div>`;
+  }
+}
+
+function slSetChannel(channel) {
+  slState.channel = channel;
+  document.querySelectorAll('.sl-channel-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.sl-channel-btn[onclick="slSetChannel('${channel}')"]`);
+  if (btn) btn.classList.add('active');
+  if (slState.rawData) renderShopline(slState.rawData);
+}
+
+function slOnCompareChange() {
+  slState.compare = document.getElementById('slCompareSelect').value;
+  if (slState.rawData) renderShopline(slState.rawData);
+}
+
+function slPrevWeek() {
+  slState.weekOffset++;
+  slUpdateWeekChart();
+}
+function slNextWeek() {
+  if (slState.weekOffset > 0) { slState.weekOffset--; slUpdateWeekChart(); }
+}
+
+function slUpdateWeekChart() {
+  if (!slState.rawData) return;
+  const data = slState.rawData;
+  const orders = slFilterByChannel(data.orders || []);
+  const completed = orders.filter(o => o.status === 'completed');
+
+  // Build daily revenue map
+  const dailyMap = {};
+  completed.forEach(o => { dailyMap[o.date] = (dailyMap[o.date] || 0) + o.revenue; });
+
+  // Generate exactly 7 calendar days based on weekOffset from endDate
+  const refEnd = new Date((slState.endDate || new Date().toISOString().split('T')[0]) + 'T12:00:00');
+  const weekDates = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(refEnd);
+    d.setDate(refEnd.getDate() - slState.weekOffset * 7 - i);
+    weekDates.push(d.toISOString().split('T')[0]);
+  }
+  const prevDates = weekDates.map(d => {
+    const pd = new Date(d + 'T12:00:00');
+    pd.setDate(pd.getDate() - 7);
+    return pd.toISOString().split('T')[0];
+  });
+
+  // Nav buttons
+  document.getElementById('slWeekNext').disabled = (slState.weekOffset <= 0);
+
+  const weekLabel = weekDates.length > 0
+    ? `${weekDates[0].slice(5)} ~ ${weekDates[weekDates.length-1].slice(5)}`
+    : '無資料';
+  document.getElementById('slWeekLabel').textContent = weekLabel;
+
+  // Destroy old chart
+  if (slChartInstances['revenue']) {
+    slChartInstances['revenue'].destroy();
+    delete slChartInstances['revenue'];
+  }
+
+  const ctx = document.getElementById('slRevenueChart');
+  if (!ctx) return;
+
+  const currentData = weekDates.map(d => dailyMap[d] || 0);
+  const prevData    = weekDates.map((_, i) => {
+    const pd = prevDates[i]; return pd ? (dailyMap[pd] || 0) : null;
+  });
+  const hasPrev = prevData.some(v => v !== null && v > 0);
+
+  const datasets = [{
+    label: '業績', data: currentData,
+    backgroundColor: '#3b82f6', borderRadius: 4, order: 2,
+  }];
+  if (hasPrev) {
+    datasets.push({
+      label: '前一週', data: prevData,
+      type: 'line', borderColor: '#f97316', backgroundColor: 'transparent',
+      borderWidth: 2, pointRadius: 3, tension: 0.3, order: 1,
+    });
+  }
+
+  const fmt  = n => '$' + Math.round(n).toLocaleString();
+  const fmtK = n => n >= 1000 ? '$' + (n/1000).toFixed(1) + 'K' : fmt(n);
+  slChartInstances['revenue'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: weekDates.map(d => d.slice(5)), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: hasPrev, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { ticks: { callback: v => fmtK(v) }, grid: { color: '#f0f0ec' } }
+      }
+    }
+  });
+}
+
+// ── Channel filter helper ─────────────────────────────────────────────────────
+function slFilterByChannel(orders) {
+  if (slState.channel === 'all') return orders;
+  return orders.filter(o => {
+    const ch = (o.channel || 'online').toLowerCase();
+    if (slState.channel === 'online') return ch === 'online' || ch === 'web';
+    if (slState.channel === 'pos')    return ch === 'pos';
+    return true;
+  });
+}
+
+// ── Main Render ───────────────────────────────────────────────────────────────
+function renderShopline(data) {
+  const fmt  = n => '$' + Math.round(n).toLocaleString();
+  const fmtK = n => n >= 1000 ? '$' + (n/1000).toFixed(1) + 'K' : fmt(n);
+
+  // 銷毀舊圖表
+  Object.values(slChartInstances).forEach(c => { try { c.destroy(); } catch(e){} });
+  slChartInstances = {};
+
+  // ── 日期 + 頻道篩選 ──────────────────────────────────────────────────────
+  // 先依期間過濾（API 可能回傳全期資料）
+  const periodFiltered  = (data.orders || []).filter(o => {
+    if (!o.date) return true;
+    return o.date >= slState.startDate && o.date <= slState.endDate;
+  });
+  const filteredOrders  = slFilterByChannel(periodFiltered);
+  // 排除明確取消/退款，不再只依賴 status === 'completed'
+  const EXCL = new Set(['cancelled','canceled','refunded','voided','failed']);
+  const completedOrders = filteredOrders.filter(o => !EXCL.has((o.status||'').toLowerCase()));
+  const totalRev  = completedOrders.reduce((s,o) => s+o.revenue, 0);
+  const totalOrd  = completedOrders.length;
+  const avgOrd    = totalOrd > 0 ? totalRev / totalOrd : 0;
+
+  // ── 新舊客（來自 Apps Script 已修正邏輯）──────────────────────────────────
+  const newCust   = data.new_customers       || 0;
+  const retCust   = data.returning_customers || 0;
+  const totalCust = newCust + retCust;
+  const retRate   = totalCust > 0 ? ((retCust / totalCust) * 100).toFixed(1) : '0.0';
+
+  // ── 折扣碼使用率 ──────────────────────────────────────────────────────────
+  const promoUsedCnt = completedOrders.filter(o => o.promotion_names && o.promotion_names.length > 0).length;
+  const promoUsedPct = totalOrd > 0 ? ((promoUsedCnt / totalOrd)*100).toFixed(0) : '0';
+
+  // ── 免運使用率 ────────────────────────────────────────────────────────────
+  const freeShipCnt  = completedOrders.filter(o => o.has_free_shipping).length;
+  const freeShipRate = totalOrd > 0 ? ((freeShipCnt / totalOrd) * 100).toFixed(1) : '0.0';
+
+  // ── 會員等級消費佔比 ──────────────────────────────────────────────────────
+  const tierOrder  = ['一般會員','銀卡','金卡','白金卡','黑鑽卡','超級卡'];
+  const tierColors = ['#94a3b8','#9ca3af','#f59e0b','#a78bfa','#374151','#ef4444'];
+  const tierMap    = { '一般會員':0,'銀卡':0,'金卡':0,'白金卡':0,'黑鑽卡':0,'超級卡':0 };
+  if (data.member_tier_distribution) {
+    Object.entries(data.member_tier_distribution).forEach(([k,v]) => { if (tierMap[k]!==undefined) tierMap[k]=v; });
+  } else {
+    completedOrders.forEach(o => {
+      const t = o.member_tier || '一般會員';
+      if (tierMap[t] !== undefined) tierMap[t] += o.revenue;
+    });
+  }
+  const tierTotal   = Object.values(tierMap).reduce((s,v)=>s+v,0);
+  const tierHasData = tierTotal > 0;
+
+  // ── 客單價區間（1001~2000 拆成兩段）──────────────────────────────────────
+  const bracketKeys = ['~$500','$501~1000','$1001~1500','$1501~2000','$2001~3000','$3001+'];
+  const brackets = {'~$500':0,'$501~1000':0,'$1001~1500':0,'$1501~2000':0,'$2001~3000':0,'$3001+':0};
+  completedOrders.forEach(o => {
+    const r = o.revenue;
+    if      (r <= 500)  brackets['~$500']++;
+    else if (r <= 1000) brackets['$501~1000']++;
+    else if (r <= 1500) brackets['$1001~1500']++;
+    else if (r <= 2000) brackets['$1501~2000']++;
+    else if (r <= 3000) brackets['$2001~3000']++;
+    else                brackets['$3001+']++;
+  });
+
+  // ── 商品排行 HTML ─────────────────────────────────────────────────────────
+  const topProducts = data.top_products || [];
+  const maxProdRev  = topProducts.length > 0 ? topProducts[0].revenue : 1;
+  const productHTML = topProducts.slice(0, 10).map((p, i) => {
+    const barPct = ((p.revenue / maxProdRev) * 100).toFixed(0);
+    const medal  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:24px;font-size:13px;text-align:center">${medal}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px">${p.title}</div>
+        <div style="height:6px;background:#f0f0ec;border-radius:3px;overflow:hidden">
+          <div style="width:${barPct}%;height:100%;background:#3b82f6;border-radius:3px"></div>
+        </div>
+      </div>
+      <div style="text-align:right;min-width:90px">
+        <div style="font-size:12px;font-weight:700;color:#1a1a1a">${fmt(p.revenue)}</div>
+        <div style="font-size:11px;color:#999">${p.qty} 件 / ${p.orders} 單</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── 促銷活動 HTML（含 ROI）────────────────────────────────────────────────
+  const promotions = data.promotions || [];
+  const promoHTML = promotions.length === 0
+    ? '<div style="color:#aaa;font-size:13px;padding:12px 0">無折扣碼資料</div>'
+    : promotions.slice(0, 8).map(p => {
+        const roi = p.discount_total > 0 ? (p.revenue / p.discount_total).toFixed(1) : null;
+        const roiChip = roi
+          ? `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#dcfce7;color:#16a34a">ROI ${roi}x</span>`
+          : '';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f5f5f0">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <div style="font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${p.name}</div>
+              ${roiChip}
+            </div>
+            <div style="font-size:11px;color:#999">${p.orders} 筆 · 折抵 <span style="color:#dc2626;font-weight:600">${fmt(p.discount_total)}</span></div>
+          </div>
+          <div style="text-align:right;min-width:90px">
+            <div style="font-size:13px;font-weight:700;color:#1a1a1a">${fmt(p.revenue)}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+  // ── 客單價區間條 HTML ─────────────────────────────────────────────────────
+  const maxBracketVal = Math.max(...Object.values(brackets), 1);
+  const bracketHTML = bracketKeys.map(label => {
+    const cnt = brackets[label] || 0;
+    const pct = ((cnt / maxBracketVal) * 100).toFixed(0);
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+      <div style="width:90px;font-size:12px;color:#666">${label}</div>
+      <div style="flex:1;height:8px;background:#f0f0ec;border-radius:4px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:#3b82f6;border-radius:4px"></div>
+      </div>
+      <div style="width:36px;font-size:12px;font-weight:700;color:#3b82f6;text-align:right">${cnt}</div>
+    </div>`;
+  }).join('');
+
+  // ── 時段 & 星期分布 ───────────────────────────────────────────────────────
+  const hourMap = Array(24).fill(0);
+  const dowMap  = Array(7).fill(0);
+  completedOrders.forEach(o => {
+    if (typeof o.hour === 'number' && o.hour >= 0 && o.hour < 24) hourMap[o.hour] += o.revenue;
+    if (typeof o.dow  === 'number' && o.dow  >= 0 && o.dow  <  7) dowMap[o.dow]   += o.revenue;
+  });
+  const hasHourData = hourMap.some(v => v > 0);
+  const hasDowData  = dowMap.some(v => v > 0);
+  const dowLabels = ['日','一','二','三','四','五','六'];
+
+  // ── 診斷面板 HTML ─────────────────────────────────────────────────────────
+  const statusDistHTML = Object.entries(data.status_distribution || {})
+    .sort((a,b) => b[1]-a[1])
+    .map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px">
+      <span style="color:#555">${k}</span><span style="font-weight:700">${v}</span></div>`).join('');
+  const channelDistHTML = Object.entries(data.channel_distribution || {})
+    .map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px">
+      <span style="color:#555">${k || '(空白)'}</span><span style="font-weight:700">${v}</span></div>`).join('');
+  const hasDiag = data.status_distribution || data.channel_distribution;
+
+  // ── 寫入 HTML ─────────────────────────────────────────────────────────────
+  document.getElementById('shoplineDashboard').innerHTML = `
+
+    ${hasDiag ? `
+    <!-- 診斷面板 -->
+    <details style="margin-bottom:16px;border:1px solid #e8e8e4;border-radius:10px;overflow:hidden">
+      <summary style="padding:11px 16px;font-size:12px;font-weight:700;color:#666;cursor:pointer;background:#f9f9f7;list-style:none;display:flex;align-items:center;gap:6px">
+        🔍 API 診斷 — 共抓到 <b>${data.total_raw||'?'}</b> 筆原始訂單・有效顯示 <b>${totalOrd}</b> 筆（點開看詳情）
+      </summary>
+      <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:12px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#999;margin-bottom:6px;text-transform:uppercase">訂單狀態分布</div>
+          ${statusDistHTML || '<span style="color:#bbb">無資料</span>'}
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#999;margin-bottom:6px;text-transform:uppercase">頻道偵測結果（分店/銷售人員判定）</div>
+          ${channelDistHTML || '<span style="color:#bbb">無資料</span>'}
+        </div>
+        ${data.field_samples && Object.keys(data.field_samples).length > 0 ? `<div style="grid-column:1/-1">
+          <div style="font-size:11px;font-weight:700;color:#e85c00;margin-bottom:6px;text-transform:uppercase">🔑 有值的欄位（POS 識別關鍵）</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">
+            ${Object.entries(data.field_samples).map(([k,v])=>`<div style="font-size:11px;padding:3px 6px;background:#fff8f0;border-radius:4px;word-break:break-all"><b style="color:#e85c00">${k}</b>: <span style="color:#666">${v}</span></div>`).join('')}
+          </div>
+        </div>` : ''}
+        ${data.raw_order_keys ? `<div style="grid-column:1/-1">
+          <div style="font-size:11px;font-weight:700;color:#999;margin-bottom:4px;text-transform:uppercase">訂單 API 全部欄位</div>
+          <div style="font-size:11px;color:#888;word-break:break-all;line-height:1.8">${data.raw_order_keys}</div>
+        </div>` : ''}
+        ${data.raw_customer_keys ? `<div style="grid-column:1/-1">
+          <div style="font-size:11px;font-weight:700;color:#999;margin-bottom:4px;text-transform:uppercase">客戶欄位</div>
+          <div style="font-size:11px;color:#888;word-break:break-all;line-height:1.8">${data.raw_customer_keys}</div>
+        </div>` : ''}
+      </div>
+    </details>` : ''}
+
+    <!-- KPI：5張 -->
+    <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
+      <div class="kpi-card">
+        <div class="kpi-label">✅ 累計業績</div>
+        <div class="kpi-value">${fmt(totalRev)}</div>
+        <div class="kpi-sub">有效訂單 ${totalOrd} 筆 / 共 ${data.total_raw||'?'} 筆</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">🛒 平均客單價</div>
+        <div class="kpi-value">${fmt(Math.round(avgOrd))}</div>
+        <div class="kpi-sub">已完成訂單均值</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">👥 回購客比例</div>
+        <div class="kpi-value">${retRate}%</div>
+        <div class="kpi-sub">回購 ${retCust} / 新客 ${newCust}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">🎟️ 折扣碼使用率</div>
+        <div class="kpi-value">${promoUsedPct}%</div>
+        <div class="kpi-sub">${promoUsedCnt} 筆訂單使用</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">🚚 免運使用率</div>
+        <div class="kpi-value">${freeShipRate}%</div>
+        <div class="kpi-sub">${freeShipCnt} 筆訂單享免運</div>
+      </div>
+    </div>
+
+    <!-- 近7天趨勢（含週導覽）+ 會員消費佔比 -->
+    <div class="charts-grid" style="margin-bottom:18px">
+      <div class="chart-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div>
+            <div class="chart-title">📅 每週營收趨勢</div>
+            <div class="chart-sub">已完成訂單・每日加總（7天為單位）</div>
+          </div>
+          <div class="sl-week-nav">
+            <button class="sl-week-btn" id="slWeekPrev" onclick="slPrevWeek()">‹ 上週</button>
+            <span class="sl-week-label" id="slWeekLabel">—</span>
+            <button class="sl-week-btn" id="slWeekNext" onclick="slNextWeek()" disabled>下週 ›</button>
+          </div>
+        </div>
+        <div style="height:220px"><canvas id="slRevenueChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">👑 會員消費佔比</div>
+        <div class="chart-sub">各等級累計業績分布（已完成訂單）</div>
+        <div style="height:220px;display:flex;align-items:center;justify-content:center">
+          <canvas id="slTierChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 商品排行 + 促銷活動效益（含 ROI）-->
+    <div class="charts-grid" style="margin-bottom:18px">
+      <div class="chart-card">
+        <div class="chart-title">🏆 商品銷售排行 Top 10</div>
+        <div class="chart-sub">依業績排序（已完成訂單）</div>
+        <div style="margin-top:14px">${productHTML || '<div style="color:#aaa;font-size:13px">無商品資料</div>'}</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🎟️ 促銷活動效益</div>
+        <div class="chart-sub">業績貢獻・折抵金額・ROI（每折1元帶動業績）</div>
+        <div style="margin-top:10px">${promoHTML}</div>
+      </div>
+    </div>
+
+    <!-- 新舊客 + 客單價區間 + 時段分析 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px">
+      <div class="chart-card">
+        <div class="chart-title">👥 新客 vs 回購客</div>
+        <div class="chart-sub">已完成訂單顧客分析</div>
+        <div style="height:190px;display:flex;align-items:center;justify-content:center">
+          <canvas id="slCustomerChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💰 客單價區間</div>
+        <div class="chart-sub">已完成訂單分佈</div>
+        <div style="margin-top:16px">${bracketHTML}</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🕐 最佳銷售時段</div>
+        <div class="chart-sub">${hasHourData ? '每小時業績加總（24h）' : '⚠️ 需 Apps Script 回傳 hour 欄位'}</div>
+        <div style="height:190px"><canvas id="slHourChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 星期分布 -->
+    <div class="chart-card" style="margin-bottom:18px">
+      <div class="chart-title">📆 星期業績分布</div>
+      <div class="chart-sub">${hasDowData ? '各星期累計業績（已完成訂單）' : '⚠️ 需 Apps Script 回傳 dow 欄位（0=日,6=六）'}</div>
+      <div style="height:180px"><canvas id="slDowChart"></canvas></div>
+    </div>
+  `;
+
+  // ── 週趨勢圖（呼叫共用函式初始化）────────────────────────────────────────
+  slUpdateWeekChart();
+
+  // ── 會員等級消費圓餅圖 ───────────────────────────────────────────────────
+  if (tierHasData) {
+    const tierVals = tierOrder.map(k => tierMap[k] || 0);
+    slChartInstances['tier'] = new Chart(document.getElementById('slTierChart'), {
+      type: 'doughnut',
+      data: {
+        labels: tierOrder,
+        datasets: [{ data: tierVals, backgroundColor: tierColors, borderWidth: 3, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '58%',
+        plugins: {
+          legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } },
+          tooltip: { callbacks: {
+            label: ctx => `${ctx.label}: ${fmt(ctx.raw)} (${tierTotal>0?((ctx.raw/tierTotal)*100).toFixed(1):0}%)`
+          }}
+        }
+      }
+    });
+  }
+
+  // ── 新客 vs 回購客圓餅圖 ─────────────────────────────────────────────────
+  if (newCust + retCust > 0) {
+    slChartInstances['customer'] = new Chart(document.getElementById('slCustomerChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['新客', '回購客'],
+        datasets: [{ data: [newCust, retCust],
+          backgroundColor: ['#3b82f6', '#f97316'],
+          borderWidth: 3, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '55%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 12 }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw} 人 (${((ctx.raw/(newCust+retCust))*100).toFixed(1)}%)` } }
+        }
+      }
+    });
+  }
+
+  // ── 時段分析圖 ───────────────────────────────────────────────────────────
+  slChartInstances['hour'] = new Chart(document.getElementById('slHourChart'), {
+    type: 'bar',
+    data: {
+      labels: Array.from({length:24}, (_,i) => i + 'h'),
+      datasets: [{ label: '業績', data: hourMap, backgroundColor: '#8b5cf6', borderRadius: 3 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmt(c.raw) } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { display: hasHourData, ticks: { callback: v => fmtK(v) }, grid: { color: '#f0f0ec' } }
+      }
+    }
+  });
+
+  // ── 星期分布圖 ───────────────────────────────────────────────────────────
+  const dowBarColors = dowMap.map((_, i) => i === 0 || i === 6 ? '#22c55e' : '#3b82f6');
+  slChartInstances['dow'] = new Chart(document.getElementById('slDowChart'), {
+    type: 'bar',
+    data: {
+      labels: dowLabels,
+      datasets: [{ label: '業績', data: dowMap, backgroundColor: dowBarColors, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmt(c.raw) } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { display: hasDowData, ticks: { callback: v => fmtK(v) }, grid: { color: '#f0f0ec' } }
+      }
+    }
+  });
 }
 
 init();
