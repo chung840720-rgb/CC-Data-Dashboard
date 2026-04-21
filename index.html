@@ -546,14 +546,14 @@ let shoplineLoaded = false;
 
 // ── Shopline 全域狀態 ─────────────────────────────────────────────────────────
 const SL_OPEN_DATE = '2025-03-03';
-// 預設這個月（快速載入；若需開站至今請點工具列按鈕）
+// 本地日期格式（避免 toISOString() 時區問題）
+const _fmtDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const _slToday = new Date();
-const _slMonthStart = new Date(_slToday.getFullYear(), _slToday.getMonth(), 1)
-  .toISOString().split('T')[0];
+const _slMonthStart = _fmtDate(new Date(_slToday.getFullYear(), _slToday.getMonth(), 1));
 let slState = {
   period: 'thisMonth',
   startDate: _slMonthStart,
-  endDate: _slToday.toISOString().split('T')[0],
+  endDate: _fmtDate(_slToday),
   channel: 'all',
   weekOffset: 0,
   compare: '',
@@ -2231,7 +2231,8 @@ async function fetchShopline(startDate, endDate) {
 
 function slDateRange(period) {
   const today = new Date();
-  const fmt   = d => d.toISOString().split('T')[0];
+  // 使用本地時間格式，避免 toISOString() 在 UTC+8 產生日期偏移
+  const fmt   = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const shift = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
   switch (period) {
     case 'all':       return { start: SL_OPEN_DATE, end: fmt(today) };
@@ -2528,7 +2529,11 @@ function renderShopline(data) {
   const channelDistHTML = Object.entries(data.channel_distribution || {})
     .map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px">
       <span style="color:#555">${k || '(空白)'}</span><span style="font-weight:700">${v}</span></div>`).join('');
-  const hasDiag = data.status_distribution || data.channel_distribution;
+  const sourceTypeDistHTML = Object.entries(data.source_type_distribution || {})
+    .sort((a,b) => b[1]-a[1])
+    .map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px">
+      <span style="color:#555">${k || '(空白)'}</span><span style="font-weight:700">${v}</span></div>`).join('');
+  const hasDiag = data.status_distribution || data.channel_distribution || data.source_type_distribution;
 
   // ── 寫入 HTML ─────────────────────────────────────────────────────────────
   document.getElementById('shoplineDashboard').innerHTML = `
@@ -2545,9 +2550,13 @@ function renderShopline(data) {
           ${statusDistHTML || '<span style="color:#bbb">無資料</span>'}
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;color:#999;margin-bottom:6px;text-transform:uppercase">頻道偵測結果（分店/銷售人員判定）</div>
+          <div style="font-size:11px;font-weight:700;color:#999;margin-bottom:6px;text-transform:uppercase">頻道偵測結果（網店 / POS）</div>
           ${channelDistHTML || '<span style="color:#bbb">無資料</span>'}
         </div>
+        ${data.source_type_distribution ? `<div>
+          <div style="font-size:11px;font-weight:700;color:#4a90d9;margin-bottom:6px;text-transform:uppercase">order_source.type 分布</div>
+          ${sourceTypeDistHTML || '<span style="color:#bbb">無資料</span>'}
+        </div>` : ''}
         ${data.field_samples && Object.keys(data.field_samples).length > 0 ? `<div style="grid-column:1/-1">
           <div style="font-size:11px;font-weight:700;color:#e85c00;margin-bottom:6px;text-transform:uppercase">🔑 有值的欄位（POS 識別關鍵）</div>
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">
