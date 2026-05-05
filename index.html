@@ -3516,22 +3516,210 @@ function renderMonthCategorySection(monthKey) {
 }
 
 
-init();
-</script>
-</body>
-</html>
- solid #f0f0ec">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div class="chart-title">🏷️ ${m[1]}月累計品類銷售</div>
-            <div class="chart-sub">${startDate} ~ ${endDate}｜全平台合計 ${fmtFull(allTotal)}（${sorted.length} 個品類）</div>
-          </div>
-          <button onclick="navToView('products')" style="padding:6px 12px;background:#f5f5f0;border:1px solid #e8e8e4;border-radius:6px;font-size:11px;cursor:pointer">查看完整分析 →</button>
+
+// ── Rendering: 月份分頁 - 品類銷售佔比（每日業績趨勢下方）─────────────────
+function renderMonthCategoryShareSection(monthKey) {
+  const el = document.getElementById('monthCategoryShareSection');
+  if (!el) return;
+  // 5 月起才顯示
+  const m = (monthKey || '').match(/^(\d+)月/);
+  if (!m || parseInt(m[1]) < 5) { el.innerHTML = ''; return; }
+
+  const yearMonth = '2026-' + String(parseInt(m[1])).padStart(2, '0');
+  const startDate = yearMonth + '-01';
+  const today = _today();
+  const endDate = today.startsWith(yearMonth) ? today : (yearMonth + '-31');
+
+  const allCats = _emptyCats();
+  let allTotal = 0;
+  const perPlatform = {};
+  PRODUCT_PLATFORMS.forEach(pf => {
+    const a = aggregateRange(pf.key, startDate, endDate);
+    perPlatform[pf.key] = a;
+    CATEGORY_NAMES.forEach(c => allCats[c] += a.categories[c]);
+    allTotal += a.total;
+  });
+
+  if (allTotal === 0) {
+    el.innerHTML = `
+      <div class="charts-grid">
+        <div class="chart-card full" style="text-align:center;padding:30px;color:#999">
+          <div class="chart-title">🥧 ${m[1]}月品類銷售佔比</div>
+          <div class="chart-sub" style="margin-top:8px">尚未上傳 ${m[1]}月 商品銷售檔，前往「📦 商品銷售」分頁上傳</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const sorted = CATEGORY_NAMES.map(c => ({ cat: c, val: allCats[c] || 0 }))
+    .filter(x => x.val > 0)
+    .sort((x, y) => y.val - x.val);
+
+  const chartId = 'monthCategoryShareChart';
+  el.innerHTML = `
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-title">🥧 ${m[1]}月品類銷售佔比</div>
+        <div class="chart-sub">${startDate} ~ ${endDate}｜全平台合計 ${fmtFull(allTotal)}（${sorted.length} 個品類）</div>
+        <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;margin-top:14px;align-items:center">
+          <div style="height:280px;position:relative"><canvas id="${chartId}"></canvas></div>
+          <div>${sorted.map(x => {
+            const pct = (x.val / allTotal * 100);
+            const ppDetail = PRODUCT_PLATFORMS.map(pf => {
+              const v = perPlatform[pf.key].categories[x.cat] || 0;
+              return v > 0 ? `<span style="color:#666">${pf.emoji}${fmtFull(v)}</span>` : '';
+            }).filter(Boolean).join('　');
+            return `
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f5f5f0;font-size:12px">
+                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CATEGORY_COLORS[x.cat]||'#ccc'};flex-shrink:0"></span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:600">${x.cat}</div>
+                  <div style="font-size:10px;color:#999">${ppDetail}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-weight:700">${fmtFull(x.val)}</div>
+                  <div style="font-size:10px;color:#666">${pct.toFixed(1)}%</div>
+                </div>
+              </div>`;
+          }).join('')}</div>
         </div>
       </div>
-      <div>${rows}</div>
+    </div>`;
+
+  setTimeout(() => {
+    const canvas = document.getElementById(chartId);
+    if (!canvas) return;
+    if (chartInstances[chartId]) { try { chartInstances[chartId].destroy(); } catch(e){} }
+    chartInstances[chartId] = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: sorted.map(x => x.cat),
+        datasets: [{
+          data: sorted.map(x => x.val),
+          backgroundColor: sorted.map(x => CATEGORY_COLORS[x.cat] || '#ccc'),
+          borderWidth: 2, borderColor: '#fff',
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '55%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.raw;
+                const pct = (v / allTotal * 100).toFixed(1);
+                return `${ctx.label}: ${fmtFull(v)} (${pct}%)`;
+              },
+            },
+          },
+        },
+      },
+    });
+  }, 50);
+}
+
+// ── Rendering: 首頁 - 品類週環比智慧分析 ────────────────────────────────────
+function renderHomeCategoryInsights() {
+  const el = document.getElementById('categoryInsightsHome');
+  if (!el) return;
+
+  const today = _today();
+  const last7Start = _daysAgo(6);
+  const prev7Start = _daysAgo(13);
+  const prev7End   = _daysAgo(7);
+
+  const cur = _emptyCats(), prev = _emptyCats();
+  let curTotal = 0, prevTotal = 0;
+  PRODUCT_PLATFORMS.forEach(pf => {
+    const c = aggregateRange(pf.key, last7Start, today);
+    const p = aggregateRange(pf.key, prev7Start, prev7End);
+    CATEGORY_NAMES.forEach(k => { cur[k] += c.categories[k]; prev[k] += p.categories[k]; });
+    curTotal += c.total; prevTotal += p.total;
+  });
+
+  if (curTotal === 0) {
+    el.innerHTML = `
+      <div class="insights-panel" style="padding:18px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="insights-title" style="margin-bottom:4px">🏷️ 品類智慧分析</div>
+            <div style="font-size:12px;color:#999">尚未上傳商品銷售檔，前往上傳即可解鎖品類週環比與成長分析</div>
+          </div>
+          <button onclick="navToView('products')" style="padding:8px 14px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">前往上傳 →</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const cats = CATEGORY_NAMES.map(k => {
+    const c = cur[k] || 0;
+    const p = prev[k] || 0;
+    let pct = null;
+    if (p > 0) pct = (c - p) / p * 100;
+    return { cat: k, cur: c, prev: p, pct, share: curTotal > 0 ? c / curTotal * 100 : 0 };
+  }).filter(x => x.cur > 0 || x.prev > 0)
+    .sort((a, b) => b.cur - a.cur);
+
+  const top5 = cats.slice(0, 5);
+  const withPct = cats.filter(c => c.pct !== null && c.cur > 1000);
+  const topGrow = withPct.slice().sort((a,b) => b.pct - a.pct).filter(c => c.pct > 0)[0];
+  const topDrop = withPct.slice().sort((a,b) => a.pct - b.pct).filter(c => c.pct < 0)[0];
+
+  const rows = top5.map(x => {
+    let trend = '';
+    if (x.pct === null) trend = `<span style="color:#999;font-size:11px">前期無資料</span>`;
+    else {
+      const arrow = x.pct >= 0 ? '▲' : '▼';
+      const color = x.pct >= 0 ? '#dc2626' : '#16a34a';
+      trend = `<span style="color:${color};font-size:12px;font-weight:700">${arrow}${Math.abs(x.pct).toFixed(1)}%</span>`;
+    }
+    return `
+      <div style="display:grid;grid-template-columns:24px 110px 1fr 110px 80px 80px;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #f5f5f0;font-size:12px">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CATEGORY_COLORS[x.cat]||'#ccc'}"></span>
+        <span style="font-weight:600">${x.cat}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:6px;background:#f0f0ec;border-radius:3px;overflow:hidden;max-width:200px">
+            <div style="width:${x.share}%;height:100%;background:${CATEGORY_COLORS[x.cat]||'#ccc'}"></div>
+          </div>
+          <span style="font-size:11px;color:#666">${x.share.toFixed(1)}%</span>
+        </div>
+        <span style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${fmtFull(x.cur)}</span>
+        <span style="text-align:right;color:#999;font-size:11px;font-variant-numeric:tabular-nums">${fmtFull(x.prev)}</span>
+        <span style="text-align:right">${trend}</span>
+      </div>`;
+  }).join('');
+
+  const insightLines = [];
+  if (topGrow) insightLines.push(`📈 <b style="color:#dc2626">${topGrow.cat}</b> 週環比 +${topGrow.pct.toFixed(1)}%（${fmtFull(topGrow.prev)} → ${fmtFull(topGrow.cur)}），可考慮加碼投放／做專屬企劃`);
+  if (topDrop) insightLines.push(`📉 <b style="color:#16a34a">${topDrop.cat}</b> 週環比 ${topDrop.pct.toFixed(1)}%（${fmtFull(topDrop.prev)} → ${fmtFull(topDrop.cur)}），需確認是缺貨、降價、還是受眾流失`);
+  if (top5[0]) insightLines.push(`🏆 本期主力：<b>${top5[0].cat}</b>（${top5[0].share.toFixed(1)}% 營收佔比），${top5[0].cat === '洗衣精' ? '符合品牌主力，但要留意過度依賴單一品類' : '可作為本期 A/B test 主軸'}`);
+
+  el.innerHTML = `
+    <div class="insights-panel" style="padding:20px 24px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div>
+          <div class="insights-title" style="margin-bottom:2px">🏷️ 品類智慧分析｜近 7 天 vs 前 7 天</div>
+          <div style="font-size:12px;color:#999">${last7Start} ~ ${today}（合計 ${fmtFull(curTotal)}）vs ${prev7Start} ~ ${prev7End}（合計 ${fmtFull(prevTotal)}）</div>
+        </div>
+        <button onclick="navToView('products')" style="padding:6px 12px;background:#f5f5f0;border:1px solid #e8e8e4;border-radius:6px;font-size:11px;cursor:pointer">查看完整分析 →</button>
+      </div>
+      <div style="background:#fff;border:1px solid #e8e8e4;border-radius:8px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:24px 110px 1fr 110px 80px 80px;align-items:center;gap:10px;padding:10px 12px;background:#f5f5f0;font-size:11px;color:#999;font-weight:600">
+          <span></span><span>品類</span><span>營收佔比</span>
+          <span style="text-align:right">本期</span>
+          <span style="text-align:right">前期</span>
+          <span style="text-align:right">週環比</span>
+        </div>
+        ${rows}
+      </div>
+      ${insightLines.length > 0 ? `
+        <div style="margin-top:14px;padding:14px 16px;background:#fafaf5;border-radius:8px;font-size:12px;line-height:1.8">
+          ${insightLines.map(l => `<div>${l}</div>`).join('')}
+        </div>` : ''}
     </div>`;
 }
+
 
 init();
 </script>
