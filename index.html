@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>淨淨 直營線上平台儀表板</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+  // SheetJS fallback if jsDelivr 被擋
+  if (typeof XLSX === 'undefined') {
+    document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+  }
+</script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; }
@@ -409,8 +416,10 @@
   <button class="tab-btn" data-month="2月業績">2月</button>
   <button class="tab-btn" data-month="3月業績">3月</button>
   <button class="tab-btn" data-month="4月業績">4月</button>
+  <button class="tab-btn" data-month="5月業績">5月</button>
   <button class="tab-btn tab-shopline" data-view="shopline">🛒 Shopline 訂單</button>
   <button class="tab-btn tab-ga4" data-view="ga4">📊 流量分析</button>
+  <button class="tab-btn tab-products" data-view="products" style="margin-left:auto">📦 商品銷售</button>
 </div>
 
 <!-- ══════════════════ 首頁 ══════════════════ -->
@@ -528,17 +537,25 @@
   </div>
 </div>
 
-<footer id="footerText">淨淨 Cowork 自動同步｜資料來源：Google Sheets（Apps Script）｜2026-04-10 15:54 更新</footer>
+<!-- ══════════════════ 商品銷售分析 ══════════════════ -->
+<div id="productsSection" style="display:none">
+  <div class="container">
+    <button class="btn-home-back" onclick="showView('home')">← 返回首頁</button>
+    <div id="productsContent"><div class="loading">⏳ 載入中…</div></div>
+  </div>
+</div>
+
+<footer id="footerText">淨淨 Cowork 自動同步｜資料來源：Google Sheets（Apps Script）｜2026-05-04 更新</footer>
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxQhzJMRvp-1nRDcdon2VHVHkBHf7BTO2SVLtFAYV6OcQnkQ65ay-rIOcMk3UD1Rjfu_Q/exec';
-const MONTH_KEYS = ['1月業績','2月業績','3月業績','4月業績'];
-const MONTH_LABELS = { '1月業績':'1月', '2月業績':'2月', '3月業績':'3月', '4月業績':'4月' };
+const MONTH_KEYS = ['1月業績','2月業績','3月業績','4月業績','5月業績'];
+const MONTH_LABELS = { '1月業績':'1月', '2月業績':'2月', '3月業績':'3月', '4月業績':'4月', '5月業績':'5月' };
 
 const C = { momo:'#ef4444', shopee:'#f97316', web:'#3b82f6', direct:'#eab308' };
 
 let allData = {};
-let activeMonth = '4月業績';
+let activeMonth = '5月業績';
 let chartInstances = {};
 let currentView = 'home';
 let ga4Loaded = false;
@@ -568,6 +585,8 @@ function showView(view) {
   document.getElementById('ga4Section').style.display      = view === 'ga4'       ? 'block' : 'none';
   document.getElementById('metaSection').style.display     = view === 'meta'      ? 'block' : 'none';
   document.getElementById('shoplineSection').style.display = view === 'shopline'  ? 'block' : 'none';
+  const productsEl = document.getElementById('productsSection');
+  if (productsEl) productsEl.style.display = view === 'products' ? 'block' : 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -577,6 +596,8 @@ function showView(view) {
     document.querySelector('[data-view="ga4"]')?.classList.add('active');
   } else if (view === 'shopline') {
     document.querySelector('[data-view="shopline"]')?.classList.add('active');
+  } else if (view === 'products') {
+    document.querySelector('[data-view="products"]')?.classList.add('active');
   } else if (view === 'month') {
     document.querySelector(`[data-month="${activeMonth}"]`)?.classList.add('active');
   }
@@ -986,6 +1007,8 @@ function renderHomepage() {
     { label: '2月業績', title: '2月報表', icon: '📅', sub: allData['2月業績'] ? `業績 ${fmt(allData['2月業績'].summary['總']?.revenue||0)}` : '資料載入中', active: !!allData['2月業績'] },
     { label: '3月業績', title: '3月報表', icon: '📅', sub: allData['3月業績'] ? `業績 ${fmt(allData['3月業績'].summary['總']?.revenue||0)}` : '資料載入中', active: !!allData['3月業績'] },
     { label: '4月業績', title: '4月報表', icon: '📅', sub: allData['4月業績'] ? `業績 ${fmt(allData['4月業績'].summary['總']?.revenue||0)}` : '資料載入中', active: !!allData['4月業績'] },
+    { label: '5月業績', title: '5月報表', icon: '📅', sub: allData['5月業績'] ? `業績 ${fmt(allData['5月業績'].summary['總']?.revenue||0)}` : '資料載入中', active: !!allData['5月業績'] },
+    { label: 'products', title: '📦 商品銷售分析', icon: '📦', sub: '上傳四平台銷量 · 智慧交叉比對', active: true, view: true },
     { label: 'ga4',     title: 'GA4 流量分析', icon: '📊', sub: '網站流量 · 轉換漏斗 · 受眾', active: true, view: true },
     { label: 'meta',    title: 'Meta 廣告分析', icon: '📱', sub: '尚未串接，即將推出', active: false, disabled: true },
   ];
@@ -1008,11 +1031,18 @@ function renderHomepage() {
         </div>
       </div>
       <div class="platform-analysis-grid">${platformCards}</div>
+      <div id="categoryInsightsHome" style="margin-top:24px"></div>
       ${monthlyTableHTML}
+      <div id="weeklyProductsHome" style="margin-top:24px"></div>
     </div>
     <div class="home-nav-title">📂 各月報表 & 分析模組</div>
     <div class="home-nav-grid">${navHTML}</div>
   `;
+  // Render category widgets if data is available
+  setTimeout(() => {
+    try { renderHomeCategoryInsights(); } catch(e) { console.error(e); }
+    try { renderHomeWeeklyProducts(); } catch(e) { console.error(e); }
+  }, 50);
 }
 
 function navToMonth(monthKey) {
@@ -1034,6 +1064,9 @@ function navToView(viewKey) {
     }
   } else if (viewKey === 'meta') {
     showView('meta');
+  } else if (viewKey === 'products') {
+    showView('products');
+    renderProductsSection();
   }
 }
 
@@ -1160,6 +1193,12 @@ const achColor = a => a >= 1 ? 'badge-red' : a >= 0.7 ? 'badge-yellow' : 'badge-
 function renderDashboard(monthKey) {
   const data = allData[monthKey];
   if (!data) return;
+
+  // Render category widgets (5月 onwards) — runs after main render
+  setTimeout(() => {
+    try { renderMonthCategorySection(monthKey); } catch(e) { console.error(e); }
+    try { renderMonthCategoryShareSection(monthKey); } catch(e) { console.error(e); }
+  }, 100);
 
   const { monthName, summary, daily } = data;
   const total  = summary['總']      || {};
@@ -1310,6 +1349,8 @@ function renderDashboard(monthKey) {
       </div>
     </div>
 
+    <div id="monthCategorySection"></div>
+
     <div class="charts-grid">
       <div class="chart-card full">
         <div class="chart-title">📅 每日業績趨勢</div>
@@ -1317,6 +1358,8 @@ function renderDashboard(monthKey) {
         <div style="height:300px"><canvas id="lineChart"></canvas></div>
       </div>
     </div>
+
+    <div id="monthCategoryShareSection"></div>
 
     <div class="charts-grid">
       <div class="chart-card">
@@ -2197,6 +2240,13 @@ async function init() {
           return;
         }
 
+        if (btn.dataset.view === 'products') {
+          showView('products');
+          renderProductsSection();
+          return;
+        }
+
+
         if (!allData[btn.dataset.month]) {
           showView('month');
           document.getElementById('dashboard').innerHTML =
@@ -2749,6 +2799,738 @@ function renderShopline(data) {
       }
     }
   });
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+// 📦 商品銷售分析模組 v2（3 平台 + 品類自動分類 + 首頁/月報整合）
+// 平台：蝦皮 (XLSX) / MOMO (XLS) / 官網 Shopline (CSV)
+// 依據「品類分類規格 v3」定義
+// ════════════════════════════════════════════════════════════════════════════
+
+const PRODUCT_PLATFORMS = [
+  { key: 'shopee', label: '蝦皮',  color: '#f97316', emoji: '🦐', accept: '.xlsx',         hint: '匯出檔：parentskudetail*.xlsx（最佳表現商品工作表）' },
+  { key: 'momo',   label: 'MOMO', color: '#ef4444', emoji: '🛍️', accept: '.xls',          hint: '匯出檔：品類分析*.xls（商品排行工作表）' },
+  { key: 'web',    label: '官網',  color: '#3b82f6', emoji: '🌐', accept: '.csv',          hint: '匯出檔：cleancleantw-OnlineProductPerformance*.csv' },
+];
+
+const PRODUCT_LS_KEY = 'cc_categories_v2'; // { [platform]: { [yyyy-mm-dd]: { categories, total, raw, fileName, uploadedAt } } }
+
+// ── 品類定義（依優先順序，命中即停止）──────────────────────────────────────
+const CATEGORY_PRIORITY = [
+  ['特規組',     ['特惠組合','特惠組','超值組','新手打掃必備組','新手生活必備組','家事達人組','抗菌清潔組','彌月送禮組']],
+  ['柔濕巾',     ['柔濕巾','濕紙巾']],
+  ['洗衣精',     ['洗衣精']],
+  ['食器清潔皂', ['食器清潔皂']],
+  ['除垢慕斯',   ['除垢慕斯','除垢補充瓶']],
+  ['剋菌液',     ['剋菌液']],
+  ['牙膏',       ['牙膏']],
+  ['沐浴慕斯',   ['沐浴慕斯']],
+  ['沐浴露',     ['沐浴露']],
+  ['家事皂',     ['家事皂']],
+  ['除黴凝膠',   ['除黴凝膠']],
+  ['潔顏系列',   ['潔顏慕斯','潔顏乳','潔顏露','迷你瓶三入體驗組']],
+  ['水凝乳',     ['水凝乳']],
+  ['週邊',       ['冰箱貼','品牌提袋','品牌紙袋','電繡織袋','洗衣袋']],
+  ['淨心芳療',   ['精油','植物油','滾珠','晶石']],
+];
+
+const CATEGORY_NAMES = CATEGORY_PRIORITY.map(([k]) => k).concat(['其他']);
+
+const CATEGORY_COLORS = {
+  '特規組':     '#a855f7',
+  '柔濕巾':     '#06b6d4',
+  '洗衣精':     '#3b82f6',
+  '食器清潔皂': '#10b981',
+  '除垢慕斯':   '#f59e0b',
+  '剋菌液':     '#ef4444',
+  '牙膏':       '#ec4899',
+  '沐浴慕斯':   '#14b8a6',
+  '沐浴露':     '#84cc16',
+  '家事皂':     '#f97316',
+  '除黴凝膠':   '#8b5cf6',
+  '潔顏系列':   '#6366f1',
+  '水凝乳':     '#0ea5e9',
+  '週邊':       '#94a3b8',
+  '淨心芳療':   '#d97706',
+  '其他':       '#cbd5e1',
+};
+
+// 蝦皮特規組（商品規格欄判斷）
+const SHOPEE_SPEC_TOKKA = [
+  '高效清潔組','全效清潔組','全能居家組','潔淨雙霸組',
+  '懶人清潔特惠組','沐浴慕斯｜日光棉花+療癒花語',
+  '沐浴慕斯(花語)*2','沐浴慕斯(棉花)*2'
+];
+
+function _matchCategory(title) {
+  if (!title) return '其他';
+  for (const [cat, kws] of CATEGORY_PRIORITY) {
+    for (const kw of kws) {
+      if (title.indexOf(kw) >= 0) return cat;
+    }
+  }
+  return '其他';
+}
+
+function _stripAddon(title) {
+  // 加購商品前綴（中英括號都處理）
+  const m = title.match(/^[\(（]加購商品[\)）](.+)$/);
+  if (m) return m[1].trim();
+  return title;
+}
+
+function _splitMain(title) {
+  return String(title || '').split('｜')[0].trim();
+}
+
+function _toInt(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  const n = parseFloat(String(v).replace(/[,，\s]/g, ''));
+  return isFinite(n) ? Math.round(n) : 0;
+}
+
+// ── Storage ─────────────────────────────────────────────────────────────────
+function loadCategoryStore() {
+  try {
+    return JSON.parse(localStorage.getItem(PRODUCT_LS_KEY) || '{}');
+  } catch (e) { return {}; }
+}
+function saveCategoryStore(s) { localStorage.setItem(PRODUCT_LS_KEY, JSON.stringify(s)); }
+
+function _emptyCats() {
+  const o = {}; CATEGORY_NAMES.forEach(c => o[c] = 0); return o;
+}
+
+// ── Date detection from filename ────────────────────────────────────────────
+function _detectDateFromName(fileName) {
+  if (!fileName) return null;
+  // 蝦皮：parentskudetail.20260503_20260503.xlsx
+  let m = fileName.match(/(\d{4})(\d{2})(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  // 官網：...20260503-to-20260503.csv
+  m = fileName.match(/(\d{4})-?(\d{2})-?(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+
+// ── 等 SheetJS 載入（有 retry）────────────────────────────────────────────
+async function _waitForXLSX(maxMs) {
+  maxMs = maxMs || 8000;
+  const start = Date.now();
+  while (typeof XLSX === 'undefined') {
+    if (Date.now() - start > maxMs) {
+      throw new Error('SheetJS 載入失敗（超過 8 秒）。可能是網路或 CDN 被擋，請檢查是否能連到 cdn.jsdelivr.net 或 unpkg.com。');
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+}
+
+// ── Platform-specific parsers ───────────────────────────────────────────────
+async function parseShopeeFile(file) {
+  await _waitForXLSX();
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array' });
+  const sheetName = wb.SheetNames.find(n => n === '最佳表現商品') || wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  if (!rows.length) throw new Error('空檔案或缺少「最佳表現商品」工作表');
+
+  const cats = _emptyCats();
+  const unmatched = [];
+  let total = 0, processed = 0;
+
+  for (const r of rows) {
+    const specId = String(r['商品規格ID'] || '').trim();
+    const spec   = String(r['商品規格']    || '').trim();
+    const name   = String(r['商品名稱']    || '').trim();
+    const sales  = _toInt(r['銷售額(全部訂單) (TWD)']);
+
+    if (!name) continue;
+    // Filter: 合計列（兩欄同時為 -）
+    if (specId === '-' && spec === '-') continue;
+    // 0 元的規格列也跳過（避免噪音）
+    if (sales === 0) continue;
+
+    let cat;
+    // Step 1: 商品規格欄特規組判斷
+    if (SHOPEE_SPEC_TOKKA.some(kw => spec.indexOf(kw) >= 0)) {
+      cat = '特規組';
+    } else {
+      // Step 2: 通用比對（去前綴、取主標）
+      const titleMain = _splitMain(_stripAddon(name));
+      cat = _matchCategory(titleMain);
+      // Step 3: 牙膏 fallback（全名）
+      if (cat === '其他' && name.indexOf('牙膏') >= 0) cat = '牙膏';
+    }
+
+    cats[cat] += sales;
+    total     += sales;
+    processed += 1;
+    if (cat === '其他') unmatched.push({ name, spec, sales });
+  }
+  return { categories: cats, total, processed, unmatched };
+}
+
+async function parseMomoFile(file) {
+  await _waitForXLSX();
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array' });
+  const sheetName = wb.SheetNames.find(n => n === '商品排行') || wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  // 讀取為陣列模式（無 header）
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  if (rows.length < 2) throw new Error('空檔案或缺少「商品排行」工作表');
+
+  // 第一列為標題列：日期 / 累積時段 / 品號 / 品名 / 銷售數量 / 銷售金額 / ...
+  const dateIdx = 0, nameIdx = 3, salesIdx = 5;
+
+  // 找最常見的日期作為目標日（避免多日期混入）
+  const dateCount = {};
+  for (let i = 1; i < rows.length; i++) {
+    const d = String(rows[i][dateIdx] || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(d)) dateCount[d] = (dateCount[d] || 0) + 1;
+  }
+  const targetDate = Object.entries(dateCount).sort((a,b) => b[1] - a[1])[0]?.[0];
+  if (!targetDate) throw new Error('檔案中找不到有效日期');
+
+  const cats = _emptyCats();
+  const unmatched = [];
+  let total = 0, processed = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row  = rows[i];
+    const date = String(row[dateIdx]  || '').trim();
+    const name = String(row[nameIdx]  || '').trim();
+    const sales = _toInt(row[salesIdx]);
+
+    if (date !== targetDate) continue;
+    if (!name) continue;
+    if (sales === 0) continue;
+
+    let cat = _matchCategory(name);
+    if (cat === '其他' && name.indexOf('牙膏') >= 0) cat = '牙膏';
+    cats[cat] += sales;
+    total     += sales;
+    processed += 1;
+    if (cat === '其他') unmatched.push({ name, sales });
+  }
+  return { categories: cats, total, processed, unmatched, date: targetDate };
+}
+
+async function parseWebFile(file) {
+  // utf-8-sig CSV
+  let text = await file.text();
+  text = text.replace(/^﻿/, '');
+  const allRows = _parseCsvText(text);
+  if (allRows.length < 2) throw new Error('檔案過短');
+
+  // 從前 5 列尋找日期資訊
+  let detectedDate = null;
+  for (let i = 0; i < Math.min(5, allRows.length); i++) {
+    const line = (allRows[i] || []).join(',');
+    const dm = line.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+    if (dm) {
+      detectedDate = `${dm[1]}-${String(dm[2]).padStart(2,'0')}-${String(dm[3]).padStart(2,'0')}`;
+      break;
+    }
+  }
+
+  // 動態尋找標題列（含 "No." 與 "商品" 與 "銷售淨額"）
+  let headerIdx = -1, idxNo = -1, idxName = -1, idxSales = -1;
+  for (let i = 0; i < Math.min(10, allRows.length); i++) {
+    const r = allRows[i] || [];
+    const tno = r.findIndex(h => String(h || '').trim() === 'No.');
+    const tnm = r.findIndex(h => String(h || '').trim() === '商品');
+    const tsl = r.findIndex(h => String(h || '').trim() === '銷售淨額');
+    if (tno >= 0 && tnm >= 0 && tsl >= 0) {
+      headerIdx = i; idxNo = tno; idxName = tnm; idxSales = tsl; break;
+    }
+  }
+  if (headerIdx < 0) throw new Error('CSV 缺少必要欄位（No. / 商品 / 銷售淨額），請確認檔案是 Shopline「商品成效報表」匯出檔');
+  const rows = allRows.slice(headerIdx);
+
+  const cats = _emptyCats();
+  const unmatched = [];
+  let total = 0, processed = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.length < 2) continue;
+    const noVal = String(r[idxNo] || '').trim();
+    const name  = String(r[idxName] || '').trim();
+    if (!name) continue;                    // 排除空白
+    if (noVal === 'No.') continue;          // 排除重複標頭
+    if (noVal === '0' || noVal === '0.0') continue; // 排除合計列
+    const sales = _toInt(r[idxSales]);
+    if (sales === 0) continue;
+
+    const titleMain = _splitMain(_stripAddon(name));
+    let cat = _matchCategory(titleMain);
+    if (cat === '其他' && name.indexOf('牙膏') >= 0) cat = '牙膏';
+
+    cats[cat] += sales;
+    total     += sales;
+    processed += 1;
+    if (cat === '其他') unmatched.push({ name, sales });
+  }
+  return { categories: cats, total, processed, unmatched, date: detectedDate };
+}
+
+// ── CSV parser (with quoted fields) ─────────────────────────────────────────
+function _parseCsvText(text) {
+  const rows = [];
+  let cur = [], val = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i+1] === '"') { val += '"'; i++; }
+      else if (c === '"') { inQ = false; }
+      else { val += c; }
+    } else {
+      if (c === '"') { inQ = true; }
+      else if (c === ',') { cur.push(val); val = ''; }
+      else if (c === '\n') { cur.push(val); rows.push(cur); cur = []; val = ''; }
+      else if (c === '\r') { /* skip */ }
+      else { val += c; }
+    }
+  }
+  if (val.length > 0 || cur.length > 0) { cur.push(val); rows.push(cur); }
+  return rows;
+}
+
+// ── Upload handler ──────────────────────────────────────────────────────────
+async function handleCategoryUpload(input, platformKey) {
+  const file = input.files[0];
+  if (!file) return;
+  const detectedDateFromName = _detectDateFromName(file.name);
+
+  let result;
+  try {
+    if (platformKey === 'shopee')      result = await parseShopeeFile(file);
+    else if (platformKey === 'momo')   result = await parseMomoFile(file);
+    else if (platformKey === 'web')    result = await parseWebFile(file);
+    else throw new Error('未知平台');
+  } catch (e) {
+    console.error(e);
+    alert('❌ 解析失敗：' + e.message + '\n\n請確認檔案格式符合「品類分類規格 v3」。');
+    input.value = '';
+    return;
+  }
+
+  // Date：解析結果優先 → 檔名 → 今天
+  const date = result.date || detectedDateFromName || new Date().toISOString().slice(0,10);
+
+  const store = loadCategoryStore();
+  if (!store[platformKey]) store[platformKey] = {};
+  store[platformKey][date] = {
+    categories: result.categories,
+    total: result.total,
+    processed: result.processed,
+    unmatched: (result.unmatched || []).slice(0, 10),
+    fileName: file.name,
+    uploadedAt: new Date().toISOString(),
+  };
+  saveCategoryStore(store);
+
+  renderProductsSection();
+  input.value = '';
+
+  if (result.unmatched && result.unmatched.length > 0) {
+    setTimeout(() => {
+      alert(`✅ 解析完成（${result.processed} 筆）\n總額：$${result.total.toLocaleString()}\n\n⚠️ 有 ${result.unmatched.length} 筆未命中品類，已歸入「其他」：\n${result.unmatched.slice(0, 5).map(u => '・' + u.name).join('\n')}${result.unmatched.length > 5 ? '\n…還有更多' : ''}`);
+    }, 100);
+  }
+}
+
+function clearPlatformDate(platformKey, date) {
+  if (!confirm(`確定清除 ${platformKey} 在 ${date} 的資料嗎？`)) return;
+  const store = loadCategoryStore();
+  if (store[platformKey] && store[platformKey][date]) {
+    delete store[platformKey][date];
+  }
+  saveCategoryStore(store);
+  renderProductsSection();
+}
+
+function clearPlatformAll(platformKey) {
+  if (!confirm(`確定清除 ${platformKey} 全部資料嗎？`)) return;
+  const store = loadCategoryStore();
+  delete store[platformKey];
+  saveCategoryStore(store);
+  renderProductsSection();
+}
+
+// ── Aggregation ─────────────────────────────────────────────────────────────
+function aggregateRange(platformKey, startDate, endDate) {
+  // 加總某平台某段日期內的所有 categories
+  const store = loadCategoryStore();
+  const platform = store[platformKey] || {};
+  const cats = _emptyCats();
+  let total = 0, days = 0;
+  for (const date of Object.keys(platform)) {
+    if (date >= startDate && date <= endDate) {
+      const e = platform[date];
+      CATEGORY_NAMES.forEach(c => cats[c] += (e.categories[c] || 0));
+      total += e.total || 0;
+      days += 1;
+    }
+  }
+  return { categories: cats, total, days };
+}
+
+function _today() { return new Date().toISOString().slice(0,10); }
+function _daysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0,10);
+}
+function _monthStart(yyyymm) {
+  // yyyymm = '2026-05' → '2026-05-01'
+  return yyyymm + '-01';
+}
+
+// ── Rendering: Products Section ────────────────────────────────────────────
+function renderProductsSection() {
+  const container = document.getElementById('productsContent');
+  if (!container) return;
+  const store = loadCategoryStore();
+
+  // Upload cards (3)
+  const uploadCards = PRODUCT_PLATFORMS.map(pf => {
+    const platformData = store[pf.key] || {};
+    const dates = Object.keys(platformData).sort().reverse();
+    const datesHtml = dates.length === 0
+      ? `<div style="font-size:12px;color:#aaa;padding:8px 0">尚未上傳</div>`
+      : dates.slice(0, 5).map(d => {
+          const e = platformData[d];
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #f0f0ec;font-size:12px">
+            <div><b>${d}</b> <span style="color:#999">${e.processed} 筆 · ${fmtFull(e.total)}</span></div>
+            <button onclick="clearPlatformDate('${pf.key}','${d}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:11px">×</button>
+          </div>`;
+        }).join('');
+    return `
+      <div style="border:1px solid #e8e8e4;border-radius:8px;padding:18px;background:#fff;border-top:3px solid ${pf.color}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:16px;font-weight:700">${pf.emoji} ${pf.label}</div>
+          ${dates.length > 0 ? `<button onclick="clearPlatformAll('${pf.key}')" style="font-size:11px;color:#999;background:none;border:1px solid #e8e8e4;border-radius:4px;padding:4px 8px;cursor:pointer">清除全部</button>` : ''}
+        </div>
+        <div style="font-size:11px;color:#999;margin-bottom:14px;line-height:1.4">${pf.hint}</div>
+        <label style="display:block;cursor:pointer">
+          <input type="file" accept="${pf.accept}" style="display:none"
+            onchange="handleCategoryUpload(this, '${pf.key}')">
+          <div style="text-align:center;padding:12px;background:${pf.color};color:#fff;border-radius:6px;font-size:14px;font-weight:600">
+            ⬆️ 上傳 ${pf.label} 銷售檔
+          </div>
+        </label>
+        ${dates.length > 0 ? `<div style="margin-top:14px;font-size:11px;color:#999;font-weight:600;letter-spacing:1px">📅 已上傳記錄</div><div style="margin-top:6px">${datesHtml}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const uploadSection = `
+    <div style="margin-bottom:28px">
+      <div style="margin-bottom:14px">
+        <div style="font-size:20px;font-weight:700;color:#1a1a1a">📦 商品銷售資料上傳</div>
+        <div style="font-size:13px;color:#666;margin-top:4px">三平台原始檔，自動依「品類分類規格 v3」分類加總。每個檔案對應一日銷量，上傳同一日會覆蓋。</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:14px">${uploadCards}</div>
+    </div>`;
+
+  // Aggregated views
+  const totalRecords = PRODUCT_PLATFORMS.reduce((s, pf) => s + Object.keys(store[pf.key] || {}).length, 0);
+  let analysisHtml = '';
+  if (totalRecords === 0) {
+    analysisHtml = `<div style="padding:60px;text-align:center;color:#aaa;background:#fafaf5;border-radius:8px">
+      <div style="font-size:36px;margin-bottom:12px">📭</div>
+      <div style="font-size:14px">尚無資料，請先上傳任一平台的銷售檔案</div>
+    </div>`;
+  } else {
+    // 月初到今天
+    const today = _today();
+    const monthStart = today.slice(0, 7) + '-01';
+    const last7 = _daysAgo(6);  // 含今天共 7 天
+    analysisHtml = `
+      <div style="margin-bottom:28px">
+        <div style="font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:6px">📊 本月累計（${monthStart} ~ ${today}）｜各平台 × 各品類</div>
+        <div style="font-size:13px;color:#666;margin-bottom:16px">月初到今天的累積銷售額，依品類拆解</div>
+        ${renderCategoryMatrix(monthStart, today)}
+      </div>
+      <div>
+        <div style="font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:6px">📅 近 7 天（${last7} ~ ${today}）</div>
+        ${renderCategoryMatrix(last7, today)}
+      </div>`;
+  }
+
+  container.innerHTML = uploadSection + analysisHtml;
+}
+
+// ── Rendering: Category matrix（4 row × N col 表格）─────────────────────────
+function renderCategoryMatrix(startDate, endDate) {
+  const grandCats = _emptyCats();
+  let grandTotal = 0;
+  const platformAgg = {};
+  PRODUCT_PLATFORMS.forEach(pf => {
+    const a = aggregateRange(pf.key, startDate, endDate);
+    platformAgg[pf.key] = a;
+    CATEGORY_NAMES.forEach(c => grandCats[c] += a.categories[c]);
+    grandTotal += a.total;
+  });
+
+  // 排序：依各平台合計營業額排序品類
+  const sortedCats = CATEGORY_NAMES.slice().sort((a, b) => grandCats[b] - grandCats[a]);
+  const visibleCats = sortedCats.filter(c => grandCats[c] > 0);
+  if (visibleCats.length === 0) {
+    return `<div style="padding:30px;text-align:center;color:#aaa;background:#fff;border:1px dashed #e8e8e4;border-radius:8px;font-size:13px">此期間尚無資料</div>`;
+  }
+
+  const headerRow = `
+    <tr style="border-bottom:2px solid #f0f0ec">
+      <th style="padding:10px;text-align:left;font-size:11px;color:#999;font-weight:600">品類</th>
+      ${PRODUCT_PLATFORMS.map(pf => `<th style="padding:10px;text-align:right;font-size:11px;color:#999;font-weight:600">${pf.emoji} ${pf.label}</th>`).join('')}
+      <th style="padding:10px;text-align:right;font-size:11px;color:#999;font-weight:600">合計</th>
+      <th style="padding:10px;text-align:right;font-size:11px;color:#999;font-weight:600;width:80px">佔比</th>
+    </tr>`;
+
+  const rows = visibleCats.map((cat, idx) => {
+    const total = grandCats[cat];
+    const pct = grandTotal > 0 ? (total / grandTotal * 100) : 0;
+    const isTop3 = idx < 3;
+    return `
+      <tr style="border-bottom:1px solid #f5f5f0;${isTop3 ? 'background:#fafaf5' : ''}">
+        <td style="padding:10px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CATEGORY_COLORS[cat]||'#ccc'};margin-right:8px"></span>
+          <span style="font-weight:${isTop3 ? '700' : '500'}">${cat}</span>
+        </td>
+        ${PRODUCT_PLATFORMS.map(pf => {
+          const v = platformAgg[pf.key].categories[cat] || 0;
+          if (v === 0) return `<td style="padding:10px;text-align:right;color:#ddd">—</td>`;
+          return `<td style="padding:10px;text-align:right;font-variant-numeric:tabular-nums">${fmtFull(v)}</td>`;
+        }).join('')}
+        <td style="padding:10px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${fmtFull(total)}</td>
+        <td style="padding:10px;text-align:right">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+            <div style="font-size:12px;font-weight:600">${pct.toFixed(1)}%</div>
+            <div style="width:40px;height:6px;background:#f0f0ec;border-radius:3px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:${CATEGORY_COLORS[cat]||'#ccc'}"></div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  // 合計列
+  const totalRow = `
+    <tr style="border-top:2px solid #1a1a1a;background:#f5f5f0">
+      <td style="padding:12px;font-weight:700">合計</td>
+      ${PRODUCT_PLATFORMS.map(pf => `<td style="padding:12px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${fmtFull(platformAgg[pf.key].total)}</td>`).join('')}
+      <td style="padding:12px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${fmtFull(grandTotal)}</td>
+      <td style="padding:12px;text-align:right;font-weight:700">100%</td>
+    </tr>`;
+
+  return `
+    <div style="overflow-x:auto;background:#fff;border:1px solid #e8e8e4;border-radius:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:700px">
+        <thead>${headerRow}</thead>
+        <tbody>${rows}${totalRow}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── Rendering: 首頁「各平台近 7 天品類佔比」─────────────────────────────────
+function renderHomeWeeklyProducts() {
+  const el = document.getElementById('weeklyProductsHome');
+  if (!el) return;
+  const store = loadCategoryStore();
+  const totalRecords = PRODUCT_PLATFORMS.reduce((s, pf) => s + Object.keys(store[pf.key] || {}).length, 0);
+
+  if (totalRecords === 0) {
+    el.innerHTML = `
+      <div class="insights-panel" style="padding:20px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="insights-title" style="margin-bottom:4px">📦 各平台近 7 天品類銷售佔比</div>
+            <div style="font-size:12px;color:#999">尚未上傳商品銷售資料，前往上傳即可查看</div>
+          </div>
+          <button onclick="navToView('products')" style="padding:8px 14px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">前往上傳 →</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const today = _today();
+  const last7 = _daysAgo(6);
+
+  // 每個平台：前 5 大品類 + 比例
+  const cards = PRODUCT_PLATFORMS.map(pf => {
+    const a = aggregateRange(pf.key, last7, today);
+    if (a.total === 0) {
+      return `
+        <div style="border:1px solid #e8e8e4;border-radius:8px;padding:16px;background:#fff;border-top:3px solid ${pf.color}">
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px">${pf.emoji} ${pf.label}</div>
+          <div style="color:#aaa;font-size:11px;padding:12px 0;text-align:center">近 7 天無資料</div>
+        </div>`;
+    }
+    // 排序，取所有 > 0 品類
+    const sorted = CATEGORY_NAMES.map(c => ({ cat: c, val: a.categories[c] || 0 }))
+                                  .filter(x => x.val > 0)
+                                  .sort((x, y) => y.val - x.val);
+    const top5 = sorted.slice(0, 5);
+    const others = sorted.slice(5).reduce((s, x) => s + x.val, 0);
+
+    const list = top5.map(x => {
+      const pct = (x.val / a.total * 100);
+      return `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${CATEGORY_COLORS[x.cat]||'#ccc'};flex-shrink:0"></span>
+          <div style="font-size:11px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.cat}</div>
+          <div style="font-size:11px;font-weight:600;color:#1a1a1a">${pct.toFixed(1)}%</div>
+        </div>
+        <div style="height:3px;background:#f5f5f0;border-radius:2px;margin-bottom:8px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${CATEGORY_COLORS[x.cat]||'#ccc'}"></div>
+        </div>`;
+    }).join('');
+
+    const othersRow = others > 0
+      ? `<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#999;margin-top:4px">
+          <span>其他 ${sorted.length - 5} 類</span>
+          <span>${(others/a.total*100).toFixed(1)}%</span>
+        </div>` : '';
+
+    return `
+      <div style="border:1px solid #e8e8e4;border-radius:8px;padding:16px;background:#fff;border-top:3px solid ${pf.color}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:700">${pf.emoji} ${pf.label}</div>
+          <div style="font-size:11px;color:#999">${a.days} 天 · ${fmtFull(a.total)}</div>
+        </div>
+        ${list}
+        ${othersRow}
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="insights-panel" style="padding:20px 24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div>
+          <div class="insights-title" style="margin-bottom:2px">📦 各平台近 7 天品類銷售佔比</div>
+          <div style="font-size:12px;color:#999">${last7} ~ ${today}｜Top 5 品類，依銷售額排序</div>
+        </div>
+        <button onclick="navToView('products')" style="padding:6px 12px;background:#f5f5f0;border:1px solid #e8e8e4;border-radius:6px;font-size:11px;cursor:pointer">查看完整分析 →</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">${cards}</div>
+    </div>`;
+}
+
+// ── Rendering: 月度品類銷售（從該月 1 號開始累積，依營業額排序）─────────────
+function renderMonthCategorySection(monthKey) {
+  const el = document.getElementById('monthCategorySection');
+  if (!el) return;
+  // 只在 5 月（含）以後顯示
+  const m = (monthKey || '').match(/^(\d+)月/);
+  if (!m || parseInt(m[1]) < 5) {
+    el.innerHTML = '';
+    return;
+  }
+
+  const store = loadCategoryStore();
+  const totalRecords = PRODUCT_PLATFORMS.reduce((s, pf) => s + Object.keys(store[pf.key] || {}).length, 0);
+
+  // 該月 1 號到今天
+  const yearMonth = '2026-' + String(parseInt(m[1])).padStart(2, '0');
+  const startDate = yearMonth + '-01';
+  const today     = _today();
+  const endDate   = today.startsWith(yearMonth) ? today : (yearMonth + '-31');
+
+  // 加總全平台
+  const allCats = _emptyCats();
+  let allTotal = 0;
+  const perPlatform = {};
+  PRODUCT_PLATFORMS.forEach(pf => {
+    const a = aggregateRange(pf.key, startDate, endDate);
+    perPlatform[pf.key] = a;
+    CATEGORY_NAMES.forEach(c => allCats[c] += a.categories[c]);
+    allTotal += a.total;
+  });
+
+  if (totalRecords === 0 || allTotal === 0) {
+    el.innerHTML = `
+      <div class="chart-card full" style="margin-bottom:20px;padding:18px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="chart-title">🏷️ ${m[1]}月累計品類銷售</div>
+            <div class="chart-sub">${m[1]}/1 起累積 · 依營業額排序（尚無資料）</div>
+          </div>
+          <button onclick="navToView('products')" style="padding:8px 14px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">前往上傳 →</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // 排序
+  const sorted = CATEGORY_NAMES.map(c => ({ cat: c, val: allCats[c] || 0 }))
+                                .filter(x => x.val > 0)
+                                .sort((x, y) => y.val - x.val);
+
+  // 條狀視覺化
+  const maxVal = sorted[0]?.val || 1;
+  const rows = sorted.map((x, i) => {
+    const pct = allTotal > 0 ? (x.val / allTotal * 100) : 0;
+    const barW = (x.val / maxVal * 100);
+    // 各平台拆分
+    const ppDetail = PRODUCT_PLATFORMS.map(pf => {
+      const v = perPlatform[pf.key].categories[x.cat] || 0;
+      if (v === 0) return '';
+      return `<span style="font-size:10px;color:#666;margin-right:10px">${pf.emoji}${fmtFull(v)}</span>`;
+    }).join('');
+    return `
+      <div style="display:grid;grid-template-columns:24px 110px 1fr 90px 50px;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f5f5f0">
+        <div style="font-size:11px;color:#999;font-weight:600">${i + 1}</div>
+        <div>
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CATEGORY_COLORS[x.cat]||'#ccc'};margin-right:6px"></span>
+          <span style="font-size:13px;font-weight:600">${x.cat}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1;height:14px;background:#f5f5f0;border-radius:7px;overflow:hidden;max-width:240px">
+            <div style="width:${barW}%;height:100%;background:${CATEGORY_COLORS[x.cat]||'#ccc'};border-radius:7px"></div>
+          </div>
+          <div style="font-size:10px;color:#999;white-space:nowrap">${ppDetail}</div>
+        </div>
+        <div style="text-align:right;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums">${fmtFull(x.val)}</div>
+        <div style="text-align:right;font-size:11px;color:#666">${pct.toFixed(1)}%</div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="chart-card full" style="margin-bottom:20px;padding:0">
+      <div style="padding:18px 24px;border-bottom:1px solid #f0f0ec">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="chart-title">🏷️ ${m[1]}月累計品類銷售</div>
+            <div class="chart-sub">${startDate} ~ ${endDate}｜全平台合計 ${fmtFull(allTotal)}（${sorted.length} 個品類）</div>
+          </div>
+          <button onclick="navToView('products')" style="padding:6px 12px;background:#f5f5f0;border:1px solid #e8e8e4;border-radius:6px;font-size:11px;cursor:pointer">查看完整分析 →</button>
+        </div>
+      </div>
+      <div>${rows}</div>
+    </div>`;
+}
+
+
+init();
+</script>
+</body>
+</html>
+ solid #f0f0ec">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="chart-title">🏷️ ${m[1]}月累計品類銷售</div>
+            <div class="chart-sub">${startDate} ~ ${endDate}｜全平台合計 ${fmtFull(allTotal)}（${sorted.length} 個品類）</div>
+          </div>
+          <button onclick="navToView('products')" style="padding:6px 12px;background:#f5f5f0;border:1px solid #e8e8e4;border-radius:6px;font-size:11px;cursor:pointer">查看完整分析 →</button>
+        </div>
+      </div>
+      <div>${rows}</div>
+    </div>`;
 }
 
 init();
