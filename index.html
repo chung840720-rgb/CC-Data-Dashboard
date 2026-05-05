@@ -2830,7 +2830,7 @@ const CATEGORY_PRIORITY = [
   ['沐浴露',     ['沐浴露']],
   ['家事皂',     ['家事皂']],
   ['除黴凝膠',   ['除黴凝膠']],
-  ['潔顏系列',   ['潔顏慕斯','潔顏乳','潔顏露','迷你瓶三入體驗組']],
+  ['潔顏系列',   ['潔顏慕斯','潔顏乳','潔顏露','迷你瓶三入體驗組','潔顏三部曲','潔顏優惠組','迷你瓶三入組']],
   ['水凝乳',     ['水凝乳']],
   ['週邊',       ['冰箱貼','品牌提袋','品牌紙袋','電繡織袋','洗衣袋']],
   ['淨心芳療',   ['精油','植物油','滾珠','晶石']],
@@ -2977,23 +2977,29 @@ async function parseMomoFile(file) {
   await _waitForXLSX();
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
-  const sheetName = wb.SheetNames.find(n => n === '商品排行') || wb.SheetNames[0];
+  // 支援多種工作表名稱：商品排行_區間累計（區間檔）、商品排行（單日檔）
+  const sheetCandidates = ['商品排行_區間累計', '商品排行'];
+  let sheetName = sheetCandidates.find(n => wb.SheetNames.includes(n));
+  if (!sheetName) sheetName = wb.SheetNames.find(n => n.indexOf('商品排行') >= 0) || wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
-  // 讀取為陣列模式（無 header）
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
   if (rows.length < 2) throw new Error('空檔案或缺少「商品排行」工作表');
 
-  // 第一列為標題列：日期 / 累積時段 / 品號 / 品名 / 銷售數量 / 銷售金額 / ...
+  // 第一列為標題列；A 欄=日期、D 欄=品名(idx 3)、F 欄=銷售金額(idx 5)
   const dateIdx = 0, nameIdx = 3, salesIdx = 5;
 
-  // 找最常見的日期作為目標日（避免多日期混入）
-  const dateCount = {};
-  for (let i = 1; i < rows.length; i++) {
-    const d = String(rows[i][dateIdx] || '').trim();
-    if (/^\d{4}-\d{2}-\d{2}/.test(d)) dateCount[d] = (dateCount[d] || 0) + 1;
-  }
-  const targetDate = Object.entries(dateCount).sort((a,b) => b[1] - a[1])[0]?.[0];
-  if (!targetDate) throw new Error('檔案中找不到有效日期');
+  // 信任 A2（rows[1][0]）作為目標 key（單日檔=日期；區間累計檔=日期區間字串）
+  // 區間累計檔 A 欄會有 2 種值（區間 / 單日），只保留與 A2 同值的列
+  const targetKey = String(rows[1][dateIdx] || '').trim();
+  if (!targetKey) throw new Error('A2 為空，無法判定目標日期 / 區間');
+
+  // 從目標 key 嘗試取出顯示用日期
+  let targetDate = null;
+  const m = targetKey.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) targetDate = `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  // 區間檔：用區間最後一天作為日期 key
+  const m2 = targetKey.match(/(\d{4})-(\d{1,2})-(\d{1,2}).{0,5}(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m2) targetDate = `${m2[4]}-${String(m2[5]).padStart(2,'0')}-${String(m2[6]).padStart(2,'0')}`;
 
   const cats = _emptyCats();
   const unmatched = [];
@@ -3001,11 +3007,11 @@ async function parseMomoFile(file) {
 
   for (let i = 1; i < rows.length; i++) {
     const row  = rows[i];
-    const date = String(row[dateIdx]  || '').trim();
+    const key  = String(row[dateIdx]  || '').trim();
     const name = String(row[nameIdx]  || '').trim();
     const sales = _toInt(row[salesIdx]);
 
-    if (date !== targetDate) continue;
+    if (key !== targetKey) continue;       // 只取 A 欄等於 A2 的列
     if (!name) continue;
     if (sales === 0) continue;
 
@@ -3063,6 +3069,7 @@ async function parseWebFile(file) {
     if (!name) continue;                    // 排除空白
     if (noVal === 'No.') continue;          // 排除重複標頭
     if (noVal === '0' || noVal === '0.0') continue; // 排除合計列
+    if (name.indexOf('團購') >= 0) continue;        // 排除團購商品（不計入品類）
     const sales = _toInt(r[idxSales]);
     if (sales === 0) continue;
 
